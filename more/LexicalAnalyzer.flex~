@@ -1,0 +1,108 @@
+import java.util.regex.PatternSyntaxException;
+
+%%// Options of the scanner
+
+%class LexicalAnalyzer	//Name
+%unicode						//Use unicode
+%line							//Use line counter (yyline variable)
+%column						//Use character counter by line (yycolumn variable)
+%function nextToken
+%type Symbol
+%yylexthrow PatternSyntaxException
+
+%eofval{
+	return new Symbol(LexicalUnit.END_OF_STREAM,yyline, yycolumn);
+%eofval}
+
+//Extended Regular Expressions
+
+LineTerminator   = "\r"|"\n"
+	
+Begin            = "begin"
+End              = "end"
+Space            = "\t" | " "		
+
+Plus             = "+"
+Minus            = "-"
+Multiply         = "*"
+Divide           = "/"
+LeftParenthesis  = "("
+RightParenthesis = ")"
+SemiColon        = ";"
+Comment          = "co"{Space} ~({Space}"co"[\t\r\n" "])
+
+If               = "if"
+Then             = "then"
+Fi               = "fi"
+Else             = "else" 
+
+Not = "not"
+
+And              = "and" 
+Or               = "or" 
+
+Equal            = \= 
+GreaterOrEqual   = >\=
+Greater          = > 
+LessOrEqual      = <\= 
+Less             = < 
+Different        = \/\= 
+Assign           = ":="
+
+While            = "while"
+Do               = "do"
+Od               = "od" 
+
+For              = "for"
+From             = "from"
+By               = "by"
+To               = "to"
+
+Print            = "print"
+Read             = "read" 
+
+//Declare exclusive states
+
+VarName          = [A-Za-z][0-9a-zA-Z]*
+Number           = [0-9]+
+
+%%//Identification of tokens
+
+{Begin}              {return new Symbol(LexicalUnit.BEG,yyline, yycolumn,yytext());}
+{End}                {return new Symbol(LexicalUnit.END,yyline, yycolumn,yytext());}
+{LeftParenthesis}    {return new Symbol(LexicalUnit.LEFT_PARENTHESIS,yyline, yycolumn,yytext());}
+{RightParenthesis}   {return new Symbol(LexicalUnit.RIGHT_PARENTHESIS,yyline, yycolumn,yytext());}
+{SemiColon}          {return new Symbol(LexicalUnit.SEMICOLON,yyline, yycolumn,yytext());}
+{Plus}               {return new Symbol(LexicalUnit.PLUS,yyline, yycolumn,yytext());}
+{Minus}              {return new Symbol(LexicalUnit.MINUS,yyline, yycolumn,yytext());}
+{Multiply}           {return new Symbol(LexicalUnit.TIMES,yyline, yycolumn,yytext());}
+{Divide}             {return new Symbol(LexicalUnit.DIVIDE,yyline, yycolumn,yytext());}
+{If}                 {return new Symbol(LexicalUnit.IF,yyline, yycolumn,yytext());}
+{Then}               {return new Symbol(LexicalUnit.THEN,yyline, yycolumn,yytext());}
+{Fi}                 {return new Symbol(LexicalUnit.FI,yyline, yycolumn,yytext());}
+{Else}               {return new Symbol(LexicalUnit.ELSE,yyline, yycolumn,yytext());}
+{And}                {return new Symbol(LexicalUnit.AND,yyline, yycolumn,yytext());}
+{Or}                 {return new Symbol(LexicalUnit.OR,yyline, yycolumn,yytext());}
+{Not}                {return new Symbol(LexicalUnit.NOT,yyline, yycolumn,yytext());}
+{Equal}              {return new Symbol(LexicalUnit.EQUAL,yyline, yycolumn,yytext());}
+{GreaterOrEqual}     {return new Symbol(LexicalUnit.GREATER_EQUAL,yyline, yycolumn,yytext());}
+{Greater}            {return new Symbol(LexicalUnit.GREATER,yyline, yycolumn,yytext());}
+{LessOrEqual}        {return new Symbol(LexicalUnit.SMALLER_EQUAL,yyline, yycolumn,yytext());}
+{Less}               {return new Symbol(LexicalUnit.SMALLER,yyline, yycolumn,yytext());}
+{Different}          {return new Symbol(LexicalUnit.DIFFERENT,yyline, yycolumn,yytext());}
+{Assign}             {return new Symbol(LexicalUnit.ASSIGN,yyline, yycolumn,yytext());}
+{While}              {return new Symbol(LexicalUnit.WHILE,yyline, yycolumn,yytext());}
+{Do}                 {return new Symbol(LexicalUnit.DO,yyline, yycolumn,yytext());}
+{Od}                 {return new Symbol(LexicalUnit.OD,yyline, yycolumn,yytext());}
+{For}                {return new Symbol(LexicalUnit.FOR,yyline, yycolumn,yytext());}
+{From}               {return new Symbol(LexicalUnit.FROM,yyline, yycolumn,yytext());}
+{By}                 {return new Symbol(LexicalUnit.BY,yyline, yycolumn,yytext());}
+{To}                 {return new Symbol(LexicalUnit.TO,yyline, yycolumn,yytext());}
+{Print}              {return new Symbol(LexicalUnit.PRINT,yyline, yycolumn,yytext());}
+{Read}               {return new Symbol(LexicalUnit.READ,yyline, yycolumn,yytext());}
+{Comment}            { /* ignore */ }
+{Space}              { /* ignore */ }
+{LineTerminator}     { /* ignore */ }
+{VarName}            {return new Symbol(LexicalUnit.VARNAME,yyline, yycolumn,yytext());}
+{Number}             {return new Symbol(LexicalUnit.NUMBER,yyline, yycolumn,yytext());}
+
