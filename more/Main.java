@@ -11,7 +11,7 @@ public class Main {
 	private static String code ="";
 	private static PrintWriter writer; // the llvm code stored
 
-	public static void main(String[] args) throws FileNotFoundException,IOException{
+	public static void main(String[] args) throws FileNotFoundException,IOException,ParseError{
 		writer = new PrintWriter("code.ll");
 		FileReader reader = new FileReader(args[0]);
 		LexicalAnalyzer scanner = new LexicalAnalyzer(reader); //our scanner
@@ -25,12 +25,11 @@ public class Main {
 		writer.println("}");
 		writer.close();
 	}
-	public static void Parser(){
+	public static void Parser() throws ParseError{
 			if(Goal())
 				System.out.println("Good");
-			else{
-				System.out.println("ERROR 1");
-			}
+			else
+				throw new ParseError(listSym.get(curToken));
 	}
 	public static boolean Match(LexicalUnit t){
 		if (listSym.get(curToken).getType().equals(t)){
@@ -142,12 +141,11 @@ public class Main {
 	public static boolean Assign(){
 		Send_output(14);
 		if(Match(LexicalUnit.VARNAME))
-		if(Match(LexicalUnit.ASSIGN)){
-			writer.println()"%"+listSym.get(curToken-1)+" = allocate i32");
-			if(ExprArith("store i32 , i32* %"+listSym.get(curToken-1)))
-				return true;
-			return false;
-		}
+		if(Match(LexicalUnit.ASSIGN))
+		if(ExprArith())
+			return true;
+		return false;
+
 	}
 	public static boolean ExprArith(){
 		Send_output(15);
