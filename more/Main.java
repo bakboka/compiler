@@ -9,9 +9,10 @@ public class Main {
 	private static int curToken = 0;
 	private static String code ="";
 	private static PrintWriter writer; // the llvm code stored
-	private static int unnamedVariable = 0,ifCounter=0,condCounter=0;
-	private static ArrayList<String> stackOfNames = new ArrayList<String>();
-	private static ArrayList<String> stackOfVariables = new ArrayList<String>();
+	private static int unnamedVariable = 0,ifCounter=0,condCounter=0,endCounter=0;
+	private static ArrayList<String> stackOfNames = new ArrayList<String>(); //stack in order to "remember" ExpArith
+	private static ArrayList<String> stackOfVariables = new ArrayList<String>(); //table of symbol
+	private static boolean allocate;
 
 	public static void main(String[] args) throws FileNotFoundException,IOException,ParseError{
 		writer = new PrintWriter("code.ll");
@@ -31,7 +32,7 @@ public class Main {
 	}
 	public static void Parser() throws ParseError{
 			if(Goal())
-				System.out.println("Good");
+				System.out.println("No error");
 			else
 				throw new ParseError(listSym.get(curToken));
 	}
@@ -45,7 +46,7 @@ public class Main {
 		}
 	}
 	public static void Send_output(int no){
-		System.out.print(no + " ");
+		//System.out.print(no + " ");
 	}
 
 	public static boolean Goal(){
@@ -145,10 +146,16 @@ public class Main {
 	public static boolean Assign(){
 		Send_output(14);
 		if(Match(LexicalUnit.VARNAME)){
-			stackOfVariables.add("%"+(String)listSym.get(curToken-1).getValue());
+			if(!stackOfVariables.contains("%"+(String)listSym.get(curToken-1).getValue())){
+				stackOfVariables.add("%"+(String)listSym.get(curToken-1).getValue());
+				allocate = true;
+			}
+			else
+				allocate = false;
 			if(Match(LexicalUnit.ASSIGN))
 			if(ExprArith()){
-				writer.println(stackOfVariables.get(stackOfVariables.size()-1)+" = alloca i32");
+				if(allocate) // memory is already allocated for that variable
+					writer.println(stackOfVariables.get(stackOfVariables.size()-1)+" = alloca i32");
 				writer.println("store i32 "+stackOfNames.get(stackOfNames.size()-1)+",i32* "+stackOfVariables.get(stackOfVariables.size()-1));
 				stackOfNames.remove(stackOfNames.size()-1);
 				return true;
@@ -404,12 +411,17 @@ public class Main {
 		if(Match(LexicalUnit.IF))
 		if(Cond())
 		if(Match(LexicalUnit.THEN)){
-			writer.println("br i1 %Cond"+(condCounter-1)+", label %"+"if_true"+ifCounter+", label %end"+ifCounter);
+			writer.println("br i1 %Cond"+(condCounter-1)+", label %"+"if_true"+ifCounter+", label %else"+ifCounter);
 			writer.println("if_true"+ifCounter+":");
 			ifCounter+=1;
 			if(Code())
-			if(EndIf())
+			if(EndIf()){
+				if(ifCounter == endCounter){
+					writer.println("br label %end"+(ifCounter-1));
+					writer.println("end"+(ifCounter-1)+":");
+				}
 				return true;
+			}
 		}
 		return false;
 	}
@@ -418,16 +430,23 @@ public class Main {
 		case FI:
 			Send_output(39);
 			if(Match(LexicalUnit.FI)){
-				writer.println("end"+(ifCounter-1)+":");
+				writer.println("br label %end"+(ifCounter-1));
+				writer.println("else"+(ifCounter-1)+":");
+				endCounter+=1;
 				return true;
 			}
 			break;
 		case ELSE:
 			Send_output(40);
-			if(Match(LexicalUnit.ELSE))
-			if(Code())
-			if(Match(LexicalUnit.FI))
-				return true;
+			if(Match(LexicalUnit.ELSE)){
+				writer.println("br label %end"+(ifCounter-1));
+				writer.println("else"+(ifCounter-1)+":");
+				if(Code())
+				if(Match(LexicalUnit.FI)){
+					endCounter+=1;
+					return true;
+				}
+			}
 		}
 		return false;
 	}
@@ -507,12 +526,12 @@ public class Main {
 		Send_output(50);
 		if(Match(LexicalUnit.PRINT))
 		if(Match(LexicalUnit.LEFT_PARENTHESIS))
-		if(Match(LexicalUnit.VARNAME))
-		if(Match(LexicalUnit.RIGHT_PARENTHESIS)){
-			writer.println("%"+unnamedVariable+" = load i32* %"+listSym.get(curToken-2).getValue());
+		if(Match(LexicalUnit.VARNAME)){
+			writer.println("%"+unnamedVariable+" = load i32* %"+listSym.get(curToken-1).getValue());
 			writer.println("call i32 @putchar(i32 %"+unnamedVariable+")");
 			unnamedVariable+=1;
-			return true;
+			if(Match(LexicalUnit.RIGHT_PARENTHESIS))
+				return true;
 		}
 		return false;
 	}
