@@ -9,10 +9,11 @@ public class Main {
 	private static int curToken = 0;
 	private static String code ="";
 	private static PrintWriter writer; // the llvm code stored
-	private static int unnamedVariable = 0,ifCounter=0,condCounter=0,endCounter=0;
+	private static int unnamedVariable = 0,ifCounter=0,condCounter=0,endCounter=0,loopCount=0;
 	private static ArrayList<String> stackOfNames = new ArrayList<String>(); //stack in order to "remember" ExpArith
 	private static ArrayList<String> stackOfVariables = new ArrayList<String>(); //table of symbol
-	private static boolean allocate;
+	private static ArrayList<String> stackOfLoop = new ArrayList<String>(); // stack of condition loop
+	private static ArrayList<Symbol> id = new ArrayList<Symbol>();
 
 	public static void main(String[] args) throws FileNotFoundException,IOException,ParseError{
 		writer = new PrintWriter("code.ll");
@@ -20,15 +21,41 @@ public class Main {
 		LexicalAnalyzer scanner = new LexicalAnalyzer(reader); //our scanner
 		for(Symbol symbol = scanner.nextToken();symbol.getType() != LexicalUnit.END_OF_STREAM;symbol = scanner.nextToken()){ // getting every token
 			listSym.add(symbol);
+			if(symbol.getType() == LexicalUnit.VARNAME && !checkID(symbol)){ // only add an identifier to the list if it is not already in it
+				id.add(symbol);
+			}
 		}
-		listSym.add(new Symbol(LexicalUnit.END_OF_STREAM,0,0,null)); //lines and column not important
+		Collections.sort(id, new Comparator<Symbol>() {
+        @Override
+        public int compare(Symbol symbol1, Symbol symbol2)
+        {
+            return  symbol1.getValue().toString().compareTo(symbol2.getValue().toString());
+        }
+    });
 		writer.println("declare i32 @putchar(i32)");
 		writer.println("define void @main(){");
 		writer.println("	entry:");
+		for(int i=0;i<id.size();i++){ // allocating memory for all variables
+			writer.println("		%"+id.get(i).getValue()+" = alloca i32");
+		}
+		listSym.add(new Symbol(LexicalUnit.END_OF_STREAM,0,0,null)); //lines and column not important
 		Parser();
-		writer.println("ret void");
+		writer.println("		ret void");
 		writer.println("}");
 		writer.close();
+	}
+	private static boolean checkID(Symbol symbol){
+	/*
+		checks if the identifier is already in our list
+		returns true if it is
+		return false if it is not
+	*/
+		for(int i=0;i<id.size();i++){
+			if(id.get(i).getValue().toString().equals(symbol.getValue().toString())){
+				return true;
+			}
+		}
+		return false;
 	}
 	public static void Parser() throws ParseError{
 			if(Goal())
@@ -146,18 +173,12 @@ public class Main {
 	public static boolean Assign(){
 		Send_output(14);
 		if(Match(LexicalUnit.VARNAME)){
-			if(!stackOfVariables.contains("%"+(String)listSym.get(curToken-1).getValue())){
-				stackOfVariables.add("%"+(String)listSym.get(curToken-1).getValue());
-				allocate = true;
-			}
-			else
-				allocate = false;
+			stackOfVariables.add("%"+(String)listSym.get(curToken-1).getValue());
 			if(Match(LexicalUnit.ASSIGN))
 			if(ExprArith()){
-				if(allocate) // memory is already allocated for that variable
-					writer.println(stackOfVariables.get(stackOfVariables.size()-1)+" = alloca i32");
-				writer.println("store i32 "+stackOfNames.get(stackOfNames.size()-1)+",i32* "+stackOfVariables.get(stackOfVariables.size()-1));
+				writer.println("		store i32 "+stackOfNames.get(stackOfNames.size()-1)+",i32* "+stackOfVariables.get(stackOfVariables.size()-1));
 				stackOfNames.remove(stackOfNames.size()-1);
+				stackOfVariables.remove(stackOfVariables.size()-1);
 				return true;
 			}
 		}
@@ -178,7 +199,7 @@ public class Main {
 			Send_output(17);
 			if(AddSub())
 			if(ExprArith()){
-				writer.println("%"+unnamedVariable+" = add i32 "+stackOfNames.get(stackOfNames.size()-1)+ ","+stackOfNames.get(stackOfNames.size()-2));
+				writer.println("		%"+unnamedVariable+" = add i32 "+stackOfNames.get(stackOfNames.size()-1)+ ","+stackOfNames.get(stackOfNames.size()-2));
 				stackOfNames.remove(stackOfNames.size()-1); // poping the variable. It is useless now
 				stackOfNames.remove(stackOfNames.size()-1); // poping the variable. It is useless now
 				stackOfNames.add("%"+unnamedVariable);
@@ -214,7 +235,7 @@ public class Main {
 		case VARNAME:
 			Send_output(22);
 			if(Match(LexicalUnit.VARNAME)){
-				writer.println("%"+unnamedVariable+" = load i32* %"+(String)listSym.get(curToken-1).getValue());
+				writer.println("		%"+unnamedVariable+" = load i32* %"+(String)listSym.get(curToken-1).getValue());
 				stackOfNames.add("%"+unnamedVariable);
 				unnamedVariable+=1;
 				return true;
@@ -270,7 +291,7 @@ public class Main {
 			Send_output(20);
 			if(MultiDiv())
 			if(Factor()){
-				writer.println("%"+unnamedVariable+" = mul i32 "+stackOfNames.get(stackOfNames.size()-1)+ ","+stackOfNames.get(stackOfNames.size()-2));
+				writer.println("		%"+unnamedVariable+" = mul i32 "+stackOfNames.get(stackOfNames.size()-1)+ ","+stackOfNames.get(stackOfNames.size()-2));
 				stackOfNames.remove(stackOfNames.size()-1); // poping the variable. It is useless now
 				stackOfNames.remove(stackOfNames.size()-1); // poping the variable. It is useless now
 				stackOfNames.add("%"+unnamedVariable);
@@ -354,7 +375,7 @@ public class Main {
 		case OR:
 			Send_output(33);
 			if(Match(LexicalUnit.OR)){
-				writer.println("br i1 %Cond"+(condCounter-1)+", label %"+"if_true"+ifCounter+", label %end"+ifCounter);
+				writer.println("		br i1 %cond"+(condCounter-1)+", label %"+"if_true"+ifCounter+", label %end"+ifCounter);
 				if(Cond()){
 					return true;
 				}
@@ -379,7 +400,7 @@ public class Main {
 			Send_output(35);
 			if(Match(LexicalUnit.AND))
 			if(Cond()){
-				writer.println("%cond"+condCounter+" = icmp eq i1 %cond"+(condCounter-1)+",%cond"+(condCounter-2));
+				writer.println("		%cond"+condCounter+" = icmp eq i1 %cond"+(condCounter-1)+",%cond"+(condCounter-2));
 				condCounter+=1;
 				return true;
 			}
@@ -400,8 +421,9 @@ public class Main {
 		if(ExprArith())
 		if(Comp())
 		if(ExprArith()){
-			writer.println("%cond"+condCounter+" = icmp "+stackOfNames.get(stackOfNames.size()-2)+" i32 "+stackOfNames.get(stackOfNames.size()-1)+","+stackOfNames.get(stackOfNames.size()-3));
+			writer.println("		%cond"+condCounter+" = icmp "+stackOfNames.get(stackOfNames.size()-2)+" i32 "+stackOfNames.get(stackOfNames.size()-1)+","+stackOfNames.get(stackOfNames.size()-3));
 			condCounter+=1;
+			stackOfNames.remove(stackOfNames.size()-1);
 			return true;
 		}
 		return false;
@@ -411,14 +433,14 @@ public class Main {
 		if(Match(LexicalUnit.IF))
 		if(Cond())
 		if(Match(LexicalUnit.THEN)){
-			writer.println("br i1 %Cond"+(condCounter-1)+", label %"+"if_true"+ifCounter+", label %else"+ifCounter);
-			writer.println("if_true"+ifCounter+":");
+			writer.println("		br i1 %cond"+(condCounter-1)+", label %"+"if_true"+ifCounter+", label %else"+ifCounter);
+			writer.println("	if_true"+ifCounter+":");
 			ifCounter+=1;
 			if(Code())
 			if(EndIf()){
 				if(ifCounter == endCounter){
-					writer.println("br label %end"+(ifCounter-1));
-					writer.println("end"+(ifCounter-1)+":");
+					writer.println("		br label %end"+(ifCounter-1));
+					writer.println("	end"+(ifCounter-1)+":");
 				}
 				return true;
 			}
@@ -430,8 +452,8 @@ public class Main {
 		case FI:
 			Send_output(39);
 			if(Match(LexicalUnit.FI)){
-				writer.println("br label %end"+(ifCounter-1));
-				writer.println("else"+(ifCounter-1)+":");
+				writer.println("		br label %end"+(ifCounter-1));
+				writer.println("	else"+(ifCounter-1)+":");
 				endCounter+=1;
 				return true;
 			}
@@ -439,8 +461,8 @@ public class Main {
 		case ELSE:
 			Send_output(40);
 			if(Match(LexicalUnit.ELSE)){
-				writer.println("br label %end"+(ifCounter-1));
-				writer.println("else"+(ifCounter-1)+":");
+				writer.println("		br label %end"+(ifCounter-1));
+				writer.println("	else"+(ifCounter-1)+":");
 				if(Code())
 				if(Match(LexicalUnit.FI)){
 					endCounter+=1;
@@ -499,11 +521,23 @@ public class Main {
 	public static boolean While(){
 		Send_output(47);
 		if(Match(LexicalUnit.WHILE))
-		if(Cond())
-		if(Match(LexicalUnit.DO))
-		if(Code())
-		if(Match(LexicalUnit.OD))
-			return true;
+		if(Cond()){
+			//stackOfLoop.add();
+			if(Match(LexicalUnit.DO)){
+				writer.println("		br i1 %cond"+(condCounter-1)+", label %loop"+loopCount+", label %endLoop"+loopCount);
+				writer.println("	loop"+loopCount+":");
+				loopCount+=1;
+				if(Code()){
+					condCounter+=1;
+					//writer.println("		"+stackOfLoop.get(stackOfLoop.size()-1));
+					writer.println("		br i1 %cond"+(condCounter-1)+", label %loop"+(loopCount-1)+", label %endLoop"+(loopCount-1));
+					if(Match(LexicalUnit.OD)){
+						writer.println("	endLoop"+(loopCount-1)+":");
+						return true;
+					}
+				}
+			}
+		}
 		return false;
 	}
 	public static boolean For(){
