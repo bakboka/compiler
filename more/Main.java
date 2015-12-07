@@ -6,10 +6,13 @@ import java.util.Collections;
 public class Main {
 
 	private static ArrayList<Symbol> listSym = new ArrayList<Symbol>();
-	private static ArrayList<Symbol> stack = new ArrayList<Symbol>();
 	private static int curToken = 0;
 	private static String code ="";
 	private static PrintWriter writer; // the llvm code stored
+	private static ArrayList<String> stack = new ArrayList<String>();
+	private static int unnamedVariable = 0;
+	private static ArrayList<String> stackOfNames = new ArrayList<String>();
+	private static ArrayList<String> stackOfVariables = new ArrayList<String>();
 
 	public static void main(String[] args) throws FileNotFoundException,IOException,ParseError{
 		writer = new PrintWriter("code.ll");
@@ -19,11 +22,18 @@ public class Main {
 			listSym.add(symbol);
 		}
 		listSym.add(new Symbol(LexicalUnit.END_OF_STREAM,0,0,null)); //lines and column not important
-		writer.println("define void @project(){");
-		writer.println("	entry:");
+		stack.add("define void @project(){");
+		stack.add("	entry:");
 		Parser();
-		writer.println("}");
+		stack.add("ret void");
+		stack.add("}");
+		generateCode();
 		writer.close();
+	}
+	public static void generateCode(){
+		for(int i=0;i<stack.size();i++){
+			writer.println(stack.get(i));
+		}
 	}
 	public static void Parser() throws ParseError{
 			if(Goal())
@@ -140,10 +150,16 @@ public class Main {
 	}
 	public static boolean Assign(){
 		Send_output(14);
-		if(Match(LexicalUnit.VARNAME))
-		if(Match(LexicalUnit.ASSIGN))
-		if(ExprArith())
-			return true;
+		if(Match(LexicalUnit.VARNAME)){
+			stackOfVariables.add("%"+(String)listSym.get(curToken-1).getValue());
+			if(Match(LexicalUnit.ASSIGN))
+			if(ExprArith()){
+				stack.add(stackOfVariables.get(stackOfVariables.size()-1)+" = alloca i32");
+				stack.add("store i32 "+stackOfNames.get(stackOfNames.size()-1)+",i32* "+stackOfVariables.get(stackOfVariables.size()-1));
+				stackOfNames.remove(stackOfNames.size()-1);
+				return true;
+			}
+		}
 		return false;
 
 	}
@@ -160,8 +176,14 @@ public class Main {
 		case MINUS:
 			Send_output(17);
 			if(AddSub())
-			if(ExprArith())
+			if(ExprArith()){
+				stack.add("%"+unnamedVariable+" = add i32 "+stackOfNames.get(stackOfNames.size()-1)+ ","+stackOfNames.get(stackOfNames.size()-2));
+				stackOfNames.remove(stackOfNames.size()-1); // poping the variable. It is useless now
+				stackOfNames.remove(stackOfNames.size()-1); // poping the variable. It is useless now
+				stackOfNames.add("%"+unnamedVariable);
+				unnamedVariable+=1;
 				return true;
+			}
 			break;
 		case BY:
 		case TO:
@@ -190,13 +212,19 @@ public class Main {
 		switch(listSym.get(curToken).getType()){
 		case VARNAME:
 			Send_output(22);
-			if(Match(LexicalUnit.VARNAME))
+			if(Match(LexicalUnit.VARNAME)){
+				stack.add("%"+unnamedVariable+" = load i32* %"+(String)listSym.get(curToken-1).getValue());
+				stackOfNames.add("%"+unnamedVariable);
+				unnamedVariable+=1;
 				return true;
+			}
 			break;
 		case NUMBER:
 			Send_output(23);
-			if(Match(LexicalUnit.NUMBER))
+			if(Match(LexicalUnit.NUMBER)){
+				stackOfNames.add((String)listSym.get(curToken-1).getValue()); // adding the value to the stack
 				return true;
+			}
 			break;
 		case LEFT_PARENTHESIS:
 			Send_output(24);
@@ -240,8 +268,14 @@ public class Main {
 		case DIVIDE:
 			Send_output(20);
 			if(MultiDiv())
-			if(Factor())
+			if(Factor()){
+				stack.add("%"+unnamedVariable+" = mul i32 "+stackOfNames.get(stackOfNames.size()-1)+ ","+stackOfNames.get(stackOfNames.size()-2));
+				stackOfNames.remove(stackOfNames.size()-1); // poping the variable. It is useless now
+				stackOfNames.remove(stackOfNames.size()-1); // poping the variable. It is useless now
+				stackOfNames.add("%"+unnamedVariable);
+				unnamedVariable+=1;
 				return true;
+			}
 			break;
 		case PLUS:
 		case MINUS:
@@ -453,8 +487,12 @@ public class Main {
 		if(Match(LexicalUnit.PRINT))
 		if(Match(LexicalUnit.LEFT_PARENTHESIS))
 		if(Match(LexicalUnit.VARNAME))
-		if(Match(LexicalUnit.RIGHT_PARENTHESIS))
+		if(Match(LexicalUnit.RIGHT_PARENTHESIS)){
+			stack.add("%"+unnamedVariable+" = load i32* "+stackOfVariables.get(stackOfVariables.size()-1));
+			stack.add("call @println(i32 %"+unnamedVariable+")");
+			unnamedVariable+=1;
 			return true;
+		}
 		return false;
 	}
 	public static boolean Read(){
