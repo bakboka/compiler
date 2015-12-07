@@ -9,8 +9,7 @@ public class Main {
 	private static int curToken = 0;
 	private static String code ="";
 	private static PrintWriter writer; // the llvm code stored
-	private static ArrayList<String> stack = new ArrayList<String>();
-	private static int unnamedVariable = 0;
+	private static int unnamedVariable = 0,ifCounter=0,condCounter=0;
 	private static ArrayList<String> stackOfNames = new ArrayList<String>();
 	private static ArrayList<String> stackOfVariables = new ArrayList<String>();
 
@@ -22,18 +21,13 @@ public class Main {
 			listSym.add(symbol);
 		}
 		listSym.add(new Symbol(LexicalUnit.END_OF_STREAM,0,0,null)); //lines and column not important
-		stack.add("define void @project(){");
-		stack.add("	entry:");
+		writer.println("declare i32 @putchar(i32)");
+		writer.println("define void @main(){");
+		writer.println("	entry:");
 		Parser();
-		stack.add("ret void");
-		stack.add("}");
-		generateCode();
+		writer.println("ret void");
+		writer.println("}");
 		writer.close();
-	}
-	public static void generateCode(){
-		for(int i=0;i<stack.size();i++){
-			writer.println(stack.get(i));
-		}
 	}
 	public static void Parser() throws ParseError{
 			if(Goal())
@@ -154,8 +148,8 @@ public class Main {
 			stackOfVariables.add("%"+(String)listSym.get(curToken-1).getValue());
 			if(Match(LexicalUnit.ASSIGN))
 			if(ExprArith()){
-				stack.add(stackOfVariables.get(stackOfVariables.size()-1)+" = alloca i32");
-				stack.add("store i32 "+stackOfNames.get(stackOfNames.size()-1)+",i32* "+stackOfVariables.get(stackOfVariables.size()-1));
+				writer.println(stackOfVariables.get(stackOfVariables.size()-1)+" = alloca i32");
+				writer.println("store i32 "+stackOfNames.get(stackOfNames.size()-1)+",i32* "+stackOfVariables.get(stackOfVariables.size()-1));
 				stackOfNames.remove(stackOfNames.size()-1);
 				return true;
 			}
@@ -177,7 +171,7 @@ public class Main {
 			Send_output(17);
 			if(AddSub())
 			if(ExprArith()){
-				stack.add("%"+unnamedVariable+" = add i32 "+stackOfNames.get(stackOfNames.size()-1)+ ","+stackOfNames.get(stackOfNames.size()-2));
+				writer.println("%"+unnamedVariable+" = add i32 "+stackOfNames.get(stackOfNames.size()-1)+ ","+stackOfNames.get(stackOfNames.size()-2));
 				stackOfNames.remove(stackOfNames.size()-1); // poping the variable. It is useless now
 				stackOfNames.remove(stackOfNames.size()-1); // poping the variable. It is useless now
 				stackOfNames.add("%"+unnamedVariable);
@@ -213,7 +207,7 @@ public class Main {
 		case VARNAME:
 			Send_output(22);
 			if(Match(LexicalUnit.VARNAME)){
-				stack.add("%"+unnamedVariable+" = load i32* %"+(String)listSym.get(curToken-1).getValue());
+				writer.println("%"+unnamedVariable+" = load i32* %"+(String)listSym.get(curToken-1).getValue());
 				stackOfNames.add("%"+unnamedVariable);
 				unnamedVariable+=1;
 				return true;
@@ -269,7 +263,7 @@ public class Main {
 			Send_output(20);
 			if(MultiDiv())
 			if(Factor()){
-				stack.add("%"+unnamedVariable+" = mul i32 "+stackOfNames.get(stackOfNames.size()-1)+ ","+stackOfNames.get(stackOfNames.size()-2));
+				writer.println("%"+unnamedVariable+" = mul i32 "+stackOfNames.get(stackOfNames.size()-1)+ ","+stackOfNames.get(stackOfNames.size()-2));
 				stackOfNames.remove(stackOfNames.size()-1); // poping the variable. It is useless now
 				stackOfNames.remove(stackOfNames.size()-1); // poping the variable. It is useless now
 				stackOfNames.add("%"+unnamedVariable);
@@ -352,9 +346,12 @@ public class Main {
 		switch(listSym.get(curToken).getType()){
 		case OR:
 			Send_output(33);
-			if(Match(LexicalUnit.OR))
-			if(Cond())
-				return true;
+			if(Match(LexicalUnit.OR)){
+				writer.println("br i1 %Cond"+(condCounter-1)+", label %"+"if_true"+ifCounter+", label %end"+ifCounter);
+				if(Cond()){
+					return true;
+				}
+			}
 			break;
 		case AND:
 		case VARNAME:
@@ -374,8 +371,11 @@ public class Main {
 		case AND:
 			Send_output(35);
 			if(Match(LexicalUnit.AND))
-			if(Cond())
+			if(Cond()){
+				writer.println("%cond"+condCounter+" = icmp eq i1 %cond"+(condCounter-1)+",%cond"+(condCounter-2));
+				condCounter+=1;
 				return true;
+			}
 			break;
 		case VARNAME:
 		case NUMBER:
@@ -392,26 +392,35 @@ public class Main {
 		Send_output(37);
 		if(ExprArith())
 		if(Comp())
-		if(ExprArith())
+		if(ExprArith()){
+			writer.println("%cond"+condCounter+" = icmp "+stackOfNames.get(stackOfNames.size()-2)+" i32 "+stackOfNames.get(stackOfNames.size()-1)+","+stackOfNames.get(stackOfNames.size()-3));
+			condCounter+=1;
 			return true;
+		}
 		return false;
 	}
 	public static boolean If(){
 		Send_output(38);
 		if(Match(LexicalUnit.IF))
 		if(Cond())
-		if(Match(LexicalUnit.THEN))
-		if(Code())
-		if(EndIf())
-			return true;
+		if(Match(LexicalUnit.THEN)){
+			writer.println("br i1 %Cond"+(condCounter-1)+", label %"+"if_true"+ifCounter+", label %end"+ifCounter);
+			writer.println("if_true"+ifCounter+":");
+			ifCounter+=1;
+			if(Code())
+			if(EndIf())
+				return true;
+		}
 		return false;
 	}
 	public static boolean EndIf(){
 		switch(listSym.get(curToken).getType()){
 		case FI:
 			Send_output(39);
-			if(Match(LexicalUnit.FI))
+			if(Match(LexicalUnit.FI)){
+				writer.println("end"+(ifCounter-1)+":");
 				return true;
+			}
 			break;
 		case ELSE:
 			Send_output(40);
@@ -426,33 +435,45 @@ public class Main {
 		switch(listSym.get(curToken).getType()){
 		case EQUAL:
 			Send_output(41);
-			if(Match(LexicalUnit.EQUAL))
+			if(Match(LexicalUnit.EQUAL)){
+				stackOfNames.add("eq");
 				return true;
+			}
 			break;
 		case GREATER_EQUAL:
 			Send_output(42);
-			if(Match(LexicalUnit.GREATER_EQUAL))
+			if(Match(LexicalUnit.GREATER_EQUAL)){
+				stackOfNames.add("sge");
 				return true;
+			}
 			break;
 		case GREATER:
 			Send_output(43);
-			if(Match(LexicalUnit.GREATER))
+			if(Match(LexicalUnit.GREATER)){
+				stackOfNames.add("sgt");
 				return true;
+			}
 			break;
 		case SMALLER_EQUAL:
 			Send_output(44);
-			if(Match(LexicalUnit.SMALLER_EQUAL))
+			if(Match(LexicalUnit.SMALLER_EQUAL)){
+				stackOfNames.add("sle");
 				return true;
+			}
 			break;
 		case SMALLER:
 			Send_output(45);
-			if(Match(LexicalUnit.SMALLER))
+			if(Match(LexicalUnit.SMALLER)){
+				stackOfNames.add("slt");
 				return true;
+			}
 			break;
 		case DIFFERENT:
 			Send_output(46);
-			if(Match(LexicalUnit.DIFFERENT))
+			if(Match(LexicalUnit.DIFFERENT)){
+				stackOfNames.add("ne");
 				return true;
+			}
 		}
 		return false;
 	}
@@ -488,8 +509,8 @@ public class Main {
 		if(Match(LexicalUnit.LEFT_PARENTHESIS))
 		if(Match(LexicalUnit.VARNAME))
 		if(Match(LexicalUnit.RIGHT_PARENTHESIS)){
-			stack.add("%"+unnamedVariable+" = load i32* "+stackOfVariables.get(stackOfVariables.size()-1));
-			stack.add("call @println(i32 %"+unnamedVariable+")");
+			writer.println("%"+unnamedVariable+" = load i32* %"+listSym.get(curToken-2).getValue());
+			writer.println("call i32 @putchar(i32 %"+unnamedVariable+")");
 			unnamedVariable+=1;
 			return true;
 		}
