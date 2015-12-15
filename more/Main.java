@@ -6,29 +6,42 @@ import java.util.Collections;
 public class Main {
 
 	private static ArrayList<Symbol> listSym = new ArrayList<Symbol>();
-	private static ArrayList<Symbol> stack = new ArrayList<Symbol>();
 	private static int curToken = 0;
-	private static String code ="";
-	private static PrintWriter writer; // the llvm code stored
+	private static Generator code;
+	private static ArrayList<String> stack = new ArrayList<String>(); //stack of things
+	private static ArrayList<Symbol> id = new ArrayList<Symbol>(); //table of symbol
+	private static int unnamedVariable = 0;
 
 	public static void main(String[] args) throws FileNotFoundException,IOException,ParseError{
-		writer = new PrintWriter("code.ll");
 		FileReader reader = new FileReader(args[0]);
+		code = new Generator();
 		LexicalAnalyzer scanner = new LexicalAnalyzer(reader); //our scanner
 		for(Symbol symbol = scanner.nextToken();symbol.getType() != LexicalUnit.END_OF_STREAM;symbol = scanner.nextToken()){ // getting every token
 			listSym.add(symbol);
+			if(symbol.getType() == LexicalUnit.VARNAME && !checkID(symbol)){ // only add an identifier to the list if it is not already in it
+				id.add(symbol);
+			}
 		}
 		listSym.add(new Symbol(LexicalUnit.END_OF_STREAM,0,0,null)); //lines and column not important
-		writer.println("define void @project(){");
-		writer.println("	entry:");
+		code.printBegin(id);
 		Parser();
-		writer.println("}");
-		writer.close();
+		code.printEnd();
+	}
+	private static boolean checkID(Symbol symbol){
+	/*
+		checks if the identifier is already in our list
+		returns true if it is
+		return false if it is not
+	*/
+		for(int i=0;i<id.size();i++){
+			if(id.get(i).getValue().toString().equals(symbol.getValue().toString())){
+				return true;
+			}
+		}
+		return false;
 	}
 	public static void Parser() throws ParseError{
-			if(Goal())
-				System.out.println("Good");
-			else
+			if(!Goal())
 				throw new ParseError(listSym.get(curToken));
 	}
 	public static boolean Match(LexicalUnit t){
@@ -41,7 +54,7 @@ public class Main {
 		}
 	}
 	public static void Send_output(int no){
-		System.out.print(no + " ");
+		//System.out.print(no + " ");
 	}
 
 	public static boolean Goal(){
@@ -140,10 +153,16 @@ public class Main {
 	}
 	public static boolean Assign(){
 		Send_output(14);
-		if(Match(LexicalUnit.VARNAME))
-		if(Match(LexicalUnit.ASSIGN))
-		if(ExprArith())
-			return true;
+		if(Match(LexicalUnit.VARNAME)){
+			stack.add("%"+(String)listSym.get(curToken-1).getValue());
+			if(Match(LexicalUnit.ASSIGN))
+			if(ExprArith()){
+				code.assign(stack.get(stack.size()-2),stack.get(stack.size()-1));
+				stack.remove(stack.size()-1);
+				stack.remove(stack.size()-1);
+				return true;
+			}
+		}
 		return false;
 
 	}
@@ -159,9 +178,16 @@ public class Main {
 		case PLUS:
 		case MINUS:
 			Send_output(17);
-			if(AddSub())
-			if(ExprArith())
+			ArrayList<Boolean> test = AddSub();
+			if(test.get(0))
+			if(ExprArith()){
+				code.addition("%"+unnamedVariable,stack.get(stack.size()-1),stack.get(stack.size()-2),test.get(1));
+				stack.remove(stack.size()-1); // poping the variable. It is useless now
+				stack.remove(stack.size()-1); // poping the variable. It is useless now
+				stack.add("%"+unnamedVariable);
+				unnamedVariable+=1;
 				return true;
+			}
 			break;
 		case BY:
 		case TO:
@@ -190,13 +216,19 @@ public class Main {
 		switch(listSym.get(curToken).getType()){
 		case VARNAME:
 			Send_output(22);
-			if(Match(LexicalUnit.VARNAME))
+			if(Match(LexicalUnit.VARNAME)){
+				code.load("%"+unnamedVariable,(String)listSym.get(curToken-1).getValue());
+				stack.add("%"+unnamedVariable);
+				unnamedVariable+=1;
 				return true;
+			}
 			break;
 		case NUMBER:
 			Send_output(23);
-			if(Match(LexicalUnit.NUMBER))
+			if(Match(LexicalUnit.NUMBER)){
+				stack.add((String)listSym.get(curToken-1).getValue()); // adding the value to the stack
 				return true;
+			}
 			break;
 		case LEFT_PARENTHESIS:
 			Send_output(24);
@@ -213,19 +245,27 @@ public class Main {
 		}
 		return false;
 	}
-	public static boolean AddSub(){
+	public static ArrayList<Boolean> AddSub(){
+		ArrayList<Boolean> sub = new ArrayList<Boolean>();
 		switch(listSym.get(curToken).getType()){
 		case PLUS:
 			Send_output(26);
-			if(Match(LexicalUnit.PLUS))
-				return true;
+			if(Match(LexicalUnit.PLUS)){
+				sub.add(true); // we matched
+				sub.add(false);//not a substraction
+				return sub;
+			}
 			break;
 		case MINUS:
 			Send_output(27);
-			if(Match(LexicalUnit.MINUS))
-				return true;
+			if(Match(LexicalUnit.MINUS)){
+				sub.add(true);//we matched
+				sub.add(true);//substraction
+				return sub;
+			}
 		}
-		return false;
+		sub.add(false);//nothing matched
+		return sub;
 	}
 	public static boolean Factor(){
 		Send_output(18);
@@ -239,9 +279,16 @@ public class Main {
 		case TIMES:
 		case DIVIDE:
 			Send_output(20);
-			if(MultiDiv())
-			if(Factor())
+			ArrayList<Boolean> test = MultiDiv();
+			if(test.get(0))
+			if(Factor()){
+				code.multiply("%"+unnamedVariable,stack.get(stack.size()-1),stack.get(stack.size()-2),test.get(1));
+				stack.remove(stack.size()-1); // poping the variable. It is useless now
+				stack.remove(stack.size()-1); // poping the variable. It is useless now
+				stack.add("%"+unnamedVariable);
+				unnamedVariable+=1;
 				return true;
+			}
 			break;
 		case PLUS:
 		case MINUS:
@@ -275,19 +322,27 @@ public class Main {
 		}
 		return false;
 	}
-	public static boolean MultiDiv(){
+	public static ArrayList<Boolean> MultiDiv(){
+		ArrayList<Boolean> div = new ArrayList<Boolean>();
 		switch(listSym.get(curToken).getType()){
 		case TIMES:
 			Send_output(28);
-			if(Match(LexicalUnit.TIMES))
-				return true;
+			if(Match(LexicalUnit.TIMES)){
+				div.add(true);//we matched something good
+				div.add(false);//not a division
+				return div;
+			}
 			break;
 		case DIVIDE:
 			Send_output(29);
-			if(Match(LexicalUnit.DIVIDE))
-				return true;
+			if(Match(LexicalUnit.DIVIDE)){
+				div.add(true);//we matched something good
+				div.add(true);//a division
+				return div;
+			}
 		}
-		return false;
+		div.add(false); // nothing was matched
+		return div;
 	}
 	public static boolean Cond(){
 		Send_output(30);
