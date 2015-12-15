@@ -11,6 +11,7 @@ public class Main {
 	private static ArrayList<String> stack = new ArrayList<String>(); //stack of things
 	private static ArrayList<Symbol> id = new ArrayList<Symbol>(); //table of symbol
 	private static int unnamedVariable = 0;
+	private static boolean loop = false;
 
 	public static void main(String[] args) throws FileNotFoundException,IOException,ParseError{
 		FileReader reader = new FileReader(args[0]);
@@ -344,38 +345,53 @@ public class Main {
 		div.add(false); // nothing was matched
 		return div;
 	}
-	public static boolean Cond(){
+	public static Condition Cond(){
+		Condition listCond = new Condition();
 		Send_output(30);
-		if(B1())
-		if(B2())
-			return true;
-		return false;
+		if(B1(listCond))
+		if(B2(listCond)){
+			listCond.setMatched(true);
+			return listCond;
+		}
+		listCond.setMatched(false);
+		return listCond;
 	}
-	public static boolean B1(){
+	public static boolean B1(Condition cond){
 		switch(listSym.get(curToken).getType()){
 		case VARNAME:
 		case NUMBER:
 		case LEFT_PARENTHESIS:
 		case MINUS:
 			Send_output(31);
-			if(SimpleCond())
+			if(SimpleCond(cond))
 				return true;
 			break;
 		case NOT:
 			Send_output(32);
 			if(Match(LexicalUnit.NOT))
-			if(SimpleCond())
+			if(SimpleCond(cond))
 				return true;
 		}
 		return false;
 	}
-	public static boolean B2(){
+	public static boolean B2(Condition cond){
 		switch(listSym.get(curToken).getType()){
 		case OR:
 			Send_output(33);
-			if(Match(LexicalUnit.OR))
-			if(Cond())
-				return true;
+			if(Match(LexicalUnit.OR)){
+				//print every condition before
+				cond.addCond("or");
+				if(loop)
+					cond.addCond("loop");
+				else
+					cond.addCond("if");
+				Condition subCond = Cond();
+				if(subCond.getMatched()){
+					//print every condition after
+					cond.addCond(subCond);
+					return true;
+				}
+			}
 			break;
 		case AND:
 		case VARNAME:
@@ -394,9 +410,12 @@ public class Main {
 		switch(listSym.get(curToken).getType()){
 		case AND:
 			Send_output(35);
-			if(Match(LexicalUnit.AND))
-			if(Cond())
-				return true;
+			if(Match(LexicalUnit.AND)){
+				Condition cond = Cond();
+				if(cond.getMatched()){
+					return true;
+				}
+			}
 			break;
 		case VARNAME:
 		case NUMBER:
@@ -409,37 +428,67 @@ public class Main {
 		}
 		return false;
 	}
-	public static boolean SimpleCond(){
+	public static boolean SimpleCond(Condition cond){
 		Send_output(37);
-		if(ExprArith())
-		if(Comp())
-		if(ExprArith())
-			return true;
+		if(ExprArith()){
+			cond.addCond(stack.get(stack.size()-1));
+			stack.remove(stack.size()-1);
+			if(Comp()){
+				cond.addCond(stack.get(stack.size()-1));
+				stack.remove(stack.size()-1);
+				if(ExprArith()){
+					cond.addCond(stack.get(stack.size()-1));
+					stack.remove(stack.size()-1);
+					return true;
+				}
+			}
+		}
 		return false;
 	}
 	public static boolean If(){
 		Send_output(38);
-		if(Match(LexicalUnit.IF))
-		if(Cond())
-		if(Match(LexicalUnit.THEN))
-		if(Code())
-		if(EndIf())
-			return true;
+		if(Match(LexicalUnit.IF)){
+			Condition cond = Cond();
+			if(cond.getMatched())
+			if(Match(LexicalUnit.THEN)){
+				ArrayList<String> temp = new ArrayList<String>();
+				while(cond.moreCond()){
+					temp = cond.getCond();
+					if(temp.get(0).equals("or"))
+						code.jump(false);
+					else
+						code.cond(temp.get(1),temp.get(0),temp.get(2));
+				}
+				code.ifblock();
+				if(Code())
+				if(EndIf()){
+					code.endIf();
+					return true;
+				}
+			}
+		}
 		return false;
 	}
 	public static boolean EndIf(){
 		switch(listSym.get(curToken).getType()){
 		case FI:
 			Send_output(39);
-			if(Match(LexicalUnit.FI))
+			if(Match(LexicalUnit.FI)){
+				code.elseIf();
+				code.incrementEnd();
 				return true;
+			}
 			break;
 		case ELSE:
 			Send_output(40);
-			if(Match(LexicalUnit.ELSE))
-			if(Code())
-			if(Match(LexicalUnit.FI))
-				return true;
+			if(Match(LexicalUnit.ELSE)){
+				code.elseIf();
+				if(Code())
+				if(Match(LexicalUnit.FI)){
+					code.incrementEnd();
+					return true;
+				}
+			}
 		}
 		return false;
 	}
@@ -447,44 +496,58 @@ public class Main {
 		switch(listSym.get(curToken).getType()){
 		case EQUAL:
 			Send_output(41);
-			if(Match(LexicalUnit.EQUAL))
+			if(Match(LexicalUnit.EQUAL)){
+				stack.add("eq");
 				return true;
+			}
 			break;
 		case GREATER_EQUAL:
 			Send_output(42);
-			if(Match(LexicalUnit.GREATER_EQUAL))
+			if(Match(LexicalUnit.GREATER_EQUAL)){
+				stack.add("sge");
 				return true;
+			}
 			break;
 		case GREATER:
 			Send_output(43);
-			if(Match(LexicalUnit.GREATER))
+			if(Match(LexicalUnit.GREATER)){
+				stack.add("sgt");
 				return true;
+			}
 			break;
 		case SMALLER_EQUAL:
 			Send_output(44);
-			if(Match(LexicalUnit.SMALLER_EQUAL))
+			if(Match(LexicalUnit.SMALLER_EQUAL)){
+				stack.add("sle");
 				return true;
+			}
 			break;
 		case SMALLER:
 			Send_output(45);
-			if(Match(LexicalUnit.SMALLER))
+			if(Match(LexicalUnit.SMALLER)){
+				stack.add("slt");
 				return true;
+			}
 			break;
 		case DIFFERENT:
 			Send_output(46);
-			if(Match(LexicalUnit.DIFFERENT))
+			if(Match(LexicalUnit.DIFFERENT)){
+				stack.add("ne");
 				return true;
+			}
 		}
 		return false;
 	}
 	public static boolean While(){
 		Send_output(47);
-		if(Match(LexicalUnit.WHILE))
-		if(Cond())
-		if(Match(LexicalUnit.DO))
-		if(Code())
-		if(Match(LexicalUnit.OD))
-			return true;
+		if(Match(LexicalUnit.WHILE)){
+			Condition cond = Cond();
+			if(cond.getMatched())
+			if(Match(LexicalUnit.DO))
+			if(Code())
+			if(Match(LexicalUnit.OD))
+				return true;
+		}
 		return false;
 	}
 	public static boolean For(){

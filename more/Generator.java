@@ -18,6 +18,7 @@ public class Generator{
 		}
   }
   public void printEnd(){
+    writer.println("    ret void");
     writer.println("}");
 		writer.close();
   }
@@ -38,5 +39,36 @@ public class Generator{
       writer.println("		"+stock+" = div i32 "+left+ ","+right);
     else
       writer.println("		"+stock+" = mul i32 "+left+ ","+right);
+  }
+  public void cond(String comp, String var1, String var2){
+    writer.println("		%cond"+condCounter+" = icmp "+comp+" i32 "+var1+","+var2);
+    condCounter+=1;
+  }
+  public void orBlock(){
+
+  }
+  public void ifblock(){
+    jump(false);
+    writer.println("	if_true"+ifCounter+":");
+    ifCounter+=1;
+  }
+  public void endIf(){
+    if(ifCounter == endCounter){
+			writer.println("		br label %end"+(ifCounter-1));
+			writer.println("	end"+(ifCounter-1)+":");
+		}
+  }
+  public void elseIf(){
+    writer.println("		br label %end"+(ifCounter-1));
+		writer.println("	else"+(ifCounter-1)+":");
+  }
+  public void incrementEnd(){
+    endCounter+=1;
+  }
+  public void jump(boolean loop){
+    if(loop)
+      writer.println("		br i1 %cond"+(condCounter-1)+", label %"+"loop"+loopCount+", label %endLoop"+loopCount);
+    else
+      writer.println("		br i1 %cond"+(condCounter-1)+", label %"+"if_true"+ifCounter+", label %end"+ifCounter);
   }
 }
