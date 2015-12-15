@@ -11,7 +11,6 @@ public class Main {
 	private static ArrayList<String> stack = new ArrayList<String>(); //stack of things
 	private static ArrayList<Symbol> id = new ArrayList<Symbol>(); //table of symbol
 	private static int unnamedVariable = 0;
-	private static boolean loop = false;
 
 	public static void main(String[] args) throws FileNotFoundException,IOException,ParseError{
 		FileReader reader = new FileReader(args[0]);
@@ -57,7 +56,19 @@ public class Main {
 	public static void Send_output(int no){
 		//System.out.print(no + " ");
 	}
-
+public static void writeCond(Condition cond,boolean loop){
+	ArrayList<String> temp = new ArrayList<String>();
+	while(cond.moreCond()){
+		temp = cond.getCond();
+		if(temp.get(0).equals("or"))
+			code.jump(loop);
+		else if (temp.get(0).equals("and"))
+			code.and();
+		else
+			code.cond(temp.get(1),temp.get(0),temp.get(2));
+	}
+	cond.resetPointer();
+}
 	public static boolean Goal(){
 		Send_output(1);
 		if(Program())
@@ -345,11 +356,11 @@ public class Main {
 		div.add(false); // nothing was matched
 		return div;
 	}
-	public static Condition Cond(){
+	public static Condition Cond(boolean loop){
 		Condition listCond = new Condition();
 		Send_output(30);
 		if(B1(listCond))
-		if(B2(listCond)){
+		if(B2(listCond,loop)){
 			listCond.setMatched(true);
 			return listCond;
 		}
@@ -374,21 +385,21 @@ public class Main {
 		}
 		return false;
 	}
-	public static boolean B2(Condition cond){
+	public static boolean B2(Condition cond,boolean loop){
 		switch(listSym.get(curToken).getType()){
 		case OR:
 			Send_output(33);
 			if(Match(LexicalUnit.OR)){
 				//print every condition before
-				cond.addCond("or");
-				if(loop)
-					cond.addCond("loop");
-				else
-					cond.addCond("if");
-				Condition subCond = Cond();
+				Condition subCond = Cond(loop);
 				if(subCond.getMatched()){
 					//print every condition after
 					cond.addCond(subCond);
+					cond.addCond("or");
+					if(loop)
+						cond.addCond("loop");
+					else
+						cond.addCond("if");
 					return true;
 				}
 			}
@@ -401,18 +412,21 @@ public class Main {
 		case DO:
 		case THEN:
 			Send_output(34);
-			if(And())
+			if(And(cond,loop))
 				return true;
 		}
 		return false;
 	}
-	public static boolean And(){
+	public static boolean And(Condition oldCond,boolean loop){
 		switch(listSym.get(curToken).getType()){
 		case AND:
 			Send_output(35);
 			if(Match(LexicalUnit.AND)){
-				Condition cond = Cond();
+				Condition cond = Cond(loop);
 				if(cond.getMatched()){
+					oldCond.addCond(cond);
+					oldCond.addCond("and");
+					oldCond.addCond(" ");
 					return true;
 				}
 			}
@@ -439,6 +453,7 @@ public class Main {
 				if(ExprArith()){
 					cond.addCond(stack.get(stack.size()-1));
 					stack.remove(stack.size()-1);
+					//adding to the stackCond
 					return true;
 				}
 			}
@@ -448,17 +463,10 @@ public class Main {
 	public static boolean If(){
 		Send_output(38);
 		if(Match(LexicalUnit.IF)){
-			Condition cond = Cond();
+			Condition cond = Cond(false);
 			if(cond.getMatched())
 			if(Match(LexicalUnit.THEN)){
-				ArrayList<String> temp = new ArrayList<String>();
-				while(cond.moreCond()){
-					temp = cond.getCond();
-					if(temp.get(0).equals("or"))
-						code.jump(false);
-					else
-						code.cond(temp.get(1),temp.get(0),temp.get(2));
-				}
+				writeCond(cond,false);
 				code.ifblock();
 				if(Code())
 				if(EndIf()){
@@ -541,7 +549,7 @@ public class Main {
 	public static boolean While(){
 		Send_output(47);
 		if(Match(LexicalUnit.WHILE)){
-			Condition cond = Cond();
+			Condition cond = Cond(true);
 			if(cond.getMatched())
 			if(Match(LexicalUnit.DO))
 			if(Code())

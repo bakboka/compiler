@@ -4,6 +4,7 @@ import java.util.ArrayList;
 public class Generator{
   private int ifCounter=0,condCounter=0,endCounter=0,loopCount=0,endLoopCount=0;
   private PrintWriter writer; // the llvm code stored
+  private static ArrayList<String> stack = new ArrayList<String>(); //stack for things
 
   public Generator() throws FileNotFoundException,IOException{
     writer = new PrintWriter("code.ll");
@@ -42,10 +43,8 @@ public class Generator{
   }
   public void cond(String comp, String var1, String var2){
     writer.println("		%cond"+condCounter+" = icmp "+comp+" i32 "+var1+","+var2);
+    stack.add("%cond"+condCounter);
     condCounter+=1;
-  }
-  public void orBlock(){
-
   }
   public void ifblock(){
     jump(false);
@@ -67,8 +66,16 @@ public class Generator{
   }
   public void jump(boolean loop){
     if(loop)
-      writer.println("		br i1 %cond"+(condCounter-1)+", label %"+"loop"+loopCount+", label %endLoop"+loopCount);
+      writer.println("		br i1 %cond"+stack.get(stack.size()-1)+", label %"+"loop"+loopCount+", label %endLoop"+loopCount);
     else
-      writer.println("		br i1 %cond"+(condCounter-1)+", label %"+"if_true"+ifCounter+", label %end"+ifCounter);
+      writer.println("		br i1 %cond"+stack.get(stack.size()-1)+", label %"+"if_true"+ifCounter+", label %end"+ifCounter);
+    stack.remove(stack.size()-1);
+  }
+  public void and(){
+    writer.println("		%cond"+condCounter+" = icmp eq i1 "+stack.get(stack.size()-1)+","+stack.get(stack.size()-2));
+    stack.remove(stack.size()-1);
+    stack.remove(stack.size()-1);
+    stack.add("%cond"+condCounter);
+    condCounter+=1;
   }
 }
