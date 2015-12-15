@@ -56,7 +56,7 @@ public class Main {
 	public static void Send_output(int no){
 		//System.out.print(no + " ");
 	}
-public static void writeCond(Condition cond,boolean loop){
+public static void writeCond(Condition cond,boolean loop,boolean repeat){
 	ArrayList<String> temp = new ArrayList<String>();
 	while(cond.moreCond()){
 		temp = cond.getCond();
@@ -64,8 +64,14 @@ public static void writeCond(Condition cond,boolean loop){
 			code.jump(loop);
 		else if (temp.get(0).equals("and"))
 			code.and();
-		else
+		else if(!repeat)
 			code.cond(temp.get(1),temp.get(0),temp.get(2));
+		else{
+			code.load("%"+unnamedVariable,stack.get(stack.size()-1));
+			code.cond(temp.get(1),"%"+unnamedVariable,temp.get(2));
+			unnamedVariable+=1;
+			stack.remove(stack.size()-1);
+		}
 	}
 	cond.resetPointer();
 }
@@ -168,7 +174,7 @@ public static void writeCond(Condition cond,boolean loop){
 		if(Match(LexicalUnit.VARNAME)){
 			stack.add("%"+(String)listSym.get(curToken-1).getValue());
 			if(Match(LexicalUnit.ASSIGN))
-			if(ExprArith()){
+			if(ExprArith(false)){
 				code.assign(stack.get(stack.size()-2),stack.get(stack.size()-1));
 				stack.remove(stack.size()-1);
 				stack.remove(stack.size()-1);
@@ -178,9 +184,9 @@ public static void writeCond(Condition cond,boolean loop){
 		return false;
 
 	}
-	public static boolean ExprArith(){
+	public static boolean ExprArith(boolean loop){
 		Send_output(15);
-		if(Factor())
+		if(Factor(loop))
 		if(Terms())
 			return true;
 		return false;
@@ -192,7 +198,7 @@ public static void writeCond(Condition cond,boolean loop){
 			Send_output(17);
 			ArrayList<Boolean> test = AddSub();
 			if(test.get(0))
-			if(ExprArith()){
+			if(ExprArith(false)){
 				code.addition("%"+unnamedVariable,stack.get(stack.size()-1),stack.get(stack.size()-2),test.get(1));
 				stack.remove(stack.size()-1); // poping the variable. It is useless now
 				stack.remove(stack.size()-1); // poping the variable. It is useless now
@@ -224,11 +230,14 @@ public static void writeCond(Condition cond,boolean loop){
 		}
 		return false;
 	}
-	public static boolean A1(){
+	public static boolean A1(boolean loop){
 		switch(listSym.get(curToken).getType()){
 		case VARNAME:
 			Send_output(22);
 			if(Match(LexicalUnit.VARNAME)){
+				if(loop){
+					stack.add((String)listSym.get(curToken-1).getValue());
+				}
 				code.load("%"+unnamedVariable,(String)listSym.get(curToken-1).getValue());
 				stack.add("%"+unnamedVariable);
 				unnamedVariable+=1;
@@ -245,14 +254,14 @@ public static void writeCond(Condition cond,boolean loop){
 		case LEFT_PARENTHESIS:
 			Send_output(24);
 			if(Match(LexicalUnit.LEFT_PARENTHESIS))
-			if(ExprArith())
+			if(ExprArith(false))
 			if(Match(LexicalUnit.RIGHT_PARENTHESIS))
 				return true;
 			break;
 		case MINUS:
 			Send_output(25);
 			if(Match(LexicalUnit.MINUS))
-			if(A1())
+			if(A1(loop))
 				return true;
 		}
 		return false;
@@ -279,21 +288,21 @@ public static void writeCond(Condition cond,boolean loop){
 		sub.add(false);//nothing matched
 		return sub;
 	}
-	public static boolean Factor(){
+	public static boolean Factor(boolean loop){
 		Send_output(18);
-		if(A1())
-		if(Factors())
+		if(A1(loop))
+		if(Factors(loop))
 			return true;
 		return false;
 	}
-	public static boolean Factors(){
+	public static boolean Factors(boolean loop){
 		switch(listSym.get(curToken).getType()){
 		case TIMES:
 		case DIVIDE:
 			Send_output(20);
 			ArrayList<Boolean> test = MultiDiv();
 			if(test.get(0))
-			if(Factor()){
+			if(Factor(loop)){
 				code.multiply("%"+unnamedVariable,stack.get(stack.size()-1),stack.get(stack.size()-2),test.get(1));
 				stack.remove(stack.size()-1); // poping the variable. It is useless now
 				stack.remove(stack.size()-1); // poping the variable. It is useless now
@@ -328,8 +337,8 @@ public static void writeCond(Condition cond,boolean loop){
 		case NUMBER:
 		case LEFT_PARENTHESIS:
 			Send_output(21);
-			if(A1())
-			if(Factors())
+			if(A1(loop))
+			if(Factors(loop))
 				return true;
 		}
 		return false;
@@ -359,7 +368,7 @@ public static void writeCond(Condition cond,boolean loop){
 	public static Condition Cond(boolean loop){
 		Condition listCond = new Condition();
 		Send_output(30);
-		if(B1(listCond))
+		if(B1(listCond,loop))
 		if(B2(listCond,loop)){
 			listCond.setMatched(true);
 			return listCond;
@@ -367,20 +376,20 @@ public static void writeCond(Condition cond,boolean loop){
 		listCond.setMatched(false);
 		return listCond;
 	}
-	public static boolean B1(Condition cond){
+	public static boolean B1(Condition cond,boolean loop){
 		switch(listSym.get(curToken).getType()){
 		case VARNAME:
 		case NUMBER:
 		case LEFT_PARENTHESIS:
 		case MINUS:
 			Send_output(31);
-			if(SimpleCond(cond))
+			if(SimpleCond(cond,loop))
 				return true;
 			break;
 		case NOT:
 			Send_output(32);
 			if(Match(LexicalUnit.NOT))
-			if(SimpleCond(cond))
+			if(SimpleCond(cond,loop))
 				return true;
 		}
 		return false;
@@ -442,18 +451,17 @@ public static void writeCond(Condition cond,boolean loop){
 		}
 		return false;
 	}
-	public static boolean SimpleCond(Condition cond){
+	public static boolean SimpleCond(Condition cond,boolean loop){
 		Send_output(37);
-		if(ExprArith()){
+		if(ExprArith(loop)){
 			cond.addCond(stack.get(stack.size()-1));
 			stack.remove(stack.size()-1);
 			if(Comp()){
 				cond.addCond(stack.get(stack.size()-1));
 				stack.remove(stack.size()-1);
-				if(ExprArith()){
+				if(ExprArith(false)){
 					cond.addCond(stack.get(stack.size()-1));
 					stack.remove(stack.size()-1);
-					//adding to the stackCond
 					return true;
 				}
 			}
@@ -466,7 +474,7 @@ public static void writeCond(Condition cond,boolean loop){
 			Condition cond = Cond(false);
 			if(cond.getMatched())
 			if(Match(LexicalUnit.THEN)){
-				writeCond(cond,false);
+				writeCond(cond,false,false);
 				code.ifblock();
 				if(Code())
 				if(EndIf()){
@@ -551,10 +559,16 @@ public static void writeCond(Condition cond,boolean loop){
 		if(Match(LexicalUnit.WHILE)){
 			Condition cond = Cond(true);
 			if(cond.getMatched())
-			if(Match(LexicalUnit.DO))
-			if(Code())
-			if(Match(LexicalUnit.OD))
-				return true;
+			if(Match(LexicalUnit.DO)){
+				writeCond(cond,true,false);
+				code.beginDo();
+				if(Code())
+				if(Match(LexicalUnit.OD)){
+					writeCond(cond,true,true);
+					code.od();
+					return true;
+				}
+			}
 		}
 		return false;
 	}
@@ -563,11 +577,11 @@ public static void writeCond(Condition cond,boolean loop){
 		if(Match(LexicalUnit.FOR))
 		if(Match(LexicalUnit.VARNAME))
 		if(Match(LexicalUnit.FROM))
-		if(ExprArith())
+		if(ExprArith(false))
 		if(Match(LexicalUnit.BY))
-		if(ExprArith())
+		if(ExprArith(false))
 		if(Match(LexicalUnit.TO))
-		if(ExprArith())
+		if(ExprArith(false))
 		if(Match(LexicalUnit.DO))
 		if(Code())
 		if(Match(LexicalUnit.OD))

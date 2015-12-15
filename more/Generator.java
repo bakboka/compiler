@@ -66,9 +66,9 @@ public class Generator{
   }
   public void jump(boolean loop){
     if(loop)
-      writer.println("		br i1 %cond"+stack.get(stack.size()-1)+", label %"+"loop"+loopCount+", label %endLoop"+loopCount);
+      writer.println("		br i1 "+stack.get(stack.size()-1)+", label %"+"loop"+loopCount+", label %endLoop"+loopCount);
     else
-      writer.println("		br i1 %cond"+stack.get(stack.size()-1)+", label %"+"if_true"+ifCounter+", label %end"+ifCounter);
+      writer.println("		br i1 "+stack.get(stack.size()-1)+", label %"+"if_true"+ifCounter+", label %end"+ifCounter);
     stack.remove(stack.size()-1);
   }
   public void and(){
@@ -77,5 +77,17 @@ public class Generator{
     stack.remove(stack.size()-1);
     stack.add("%cond"+condCounter);
     condCounter+=1;
+  }
+  public void beginDo(){
+    writer.println("		br i1 "+stack.get(stack.size()-1)+", label %loop"+loopCount+", label %endLoop"+loopCount);
+    writer.println("	loop"+loopCount+":");
+		loopCount+=1;
+    stack.remove(stack.size()-1);
+  }
+  public void od(){
+    writer.println("		br i1 "+stack.get(stack.size()-1)+", label %loop"+loopCount+", label %endLoop"+loopCount);
+    writer.println("	endLoop"+(loopCount-endLoopCount-1)+":");
+		endLoopCount+=1;
+    stack.remove(stack.size()-1);
   }
 }
