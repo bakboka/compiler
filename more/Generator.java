@@ -85,7 +85,7 @@ public class Generator{
     stack.remove(stack.size()-1);
   }
   public void od(){
-    writer.println("		br i1 "+stack.get(stack.size()-1)+", label %loop"+loopCount+", label %endLoop"+loopCount);
+    writer.println("		br i1 "+stack.get(stack.size()-1)+", label %loop"+(loopCount-1)+", label %endLoop"+(loopCount-endLoopCount-1));
     writer.println("	endLoop"+(loopCount-endLoopCount-1)+":");
 		endLoopCount+=1;
     stack.remove(stack.size()-1);
