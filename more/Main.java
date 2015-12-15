@@ -592,18 +592,26 @@ public static void writeCond(Condition cond,boolean loop,boolean repeat){
 		Send_output(50);
 		if(Match(LexicalUnit.PRINT))
 		if(Match(LexicalUnit.LEFT_PARENTHESIS))
-		if(Match(LexicalUnit.VARNAME))
-		if(Match(LexicalUnit.RIGHT_PARENTHESIS))
-			return true;
+		if(Match(LexicalUnit.VARNAME)){
+			code.load("%"+unnamedVariable,"%"+(String)listSym.get(curToken-1).getValue());
+			code.print("%"+unnamedVariable);
+			unnamedVariable+=1;
+			if(Match(LexicalUnit.RIGHT_PARENTHESIS))
+				return true;
+		}
 		return false;
 	}
 	public static boolean Read(){
 		Send_output(51);
 		if(Match(LexicalUnit.READ))
 		if(Match(LexicalUnit.LEFT_PARENTHESIS))
-		if(Match(LexicalUnit.VARNAME))
-		if(Match(LexicalUnit.RIGHT_PARENTHESIS))
-			return true;
+		if(Match(LexicalUnit.VARNAME)){
+			code.read("%"+unnamedVariable);
+			code.assign("%"+(String)listSym.get(curToken-1).getValue(),"%"+unnamedVariable);
+			unnamedVariable+=1;
+			if(Match(LexicalUnit.RIGHT_PARENTHESIS))
+				return true;
+		}
 		return false;
 	}
 };

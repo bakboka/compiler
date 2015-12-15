@@ -90,4 +90,10 @@ public class Generator{
 		endLoopCount+=1;
     stack.remove(stack.size()-1);
   }
+  public void read(String var){
+    writer.println("		"+var+" = call i32 @getchar()");
+  }
+  public void print(String toShow){
+    writer.println("		call i32 @putchar(i32 "+toShow+")");
+  }
 }
