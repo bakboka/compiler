@@ -574,18 +574,40 @@ public static void writeCond(Condition cond,boolean loop,boolean repeat){
 	}
 	public static boolean For(){
 		Send_output(48);
+		Condition cond = new Condition();
 		if(Match(LexicalUnit.FOR))
-		if(Match(LexicalUnit.VARNAME))
-		if(Match(LexicalUnit.FROM))
-		if(ExprArith(false))
-		if(Match(LexicalUnit.BY))
-		if(ExprArith(false))
-		if(Match(LexicalUnit.TO))
-		if(ExprArith(false))
-		if(Match(LexicalUnit.DO))
-		if(Code())
-		if(Match(LexicalUnit.OD))
-			return true;
+		if(Match(LexicalUnit.VARNAME)){
+			stack.add("%"+(String)listSym.get(curToken-1).getValue());
+			if(Match(LexicalUnit.FROM))
+			if(ExprArith(false)){
+				code.assign(stack.get(stack.size()-2),stack.get(stack.size()-1));
+				stack.remove(stack.size()-1); //only one time because we need to remember the var name
+				if(Match(LexicalUnit.BY))
+				if(ExprArith(false))
+				if(Match(LexicalUnit.TO))
+				if(ExprArith(false)){
+					code.allocate(""+unnamedVariable);
+					code.assign("%"+unnamedVariable,stack.get(stack.size()-2));
+					stack.remove(stack.size()-1);
+					unnamedVariable+=1;
+					code.load("%"+unnamedVariable,"%"+(unnamedVariable-1));
+					stack.add("%"+unnamedVariable);//last two are unnamed and our var
+					unnamedVariable+=1;
+					cond.addCond(stack.get(stack.size()-2));
+					cond.addCond("sle");// do if lesser or equal
+					cond.addCond(stack.get(stack.size()-1));
+					writeCond(cond,true,false);
+					code.beginDo();
+					if(Match(LexicalUnit.DO))
+					if(Code()){
+						writeCond(cond,true,true);
+						code.od();
+						if(Match(LexicalUnit.OD))
+							return true;
+					}
+				}
+			}
+		}
 		return false;
 	}
 	public static boolean Print(){

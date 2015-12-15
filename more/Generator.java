@@ -15,8 +15,11 @@ public class Generator{
     writer.println("define void @project(){");
 		writer.println("	entry:");
     for(int i=0;i<id.size();i++){ // allocating memory for all variables
-			writer.println("		%"+id.get(i).getValue()+" = alloca i32");
+			allocate((String)id.get(i).getValue());
 		}
+  }
+  public void allocate(String name){
+    writer.println("		%"+name+" = alloca i32");
   }
   public void printEnd(){
     writer.println("    ret void");
@@ -33,7 +36,7 @@ public class Generator{
       writer.println("    "+stock+" = add i32 "+left+ ","+right);
   }
   public void load(String stock,String var){
-    writer.println("		"+stock+" = load i32* %"+var);
+    writer.println("		"+stock+" = load i32* "+var);
   }
   public void multiply(String stock,String left,String right,boolean division){
     if(division)
