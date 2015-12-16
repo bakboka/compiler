@@ -10,7 +10,7 @@ public class Main {
 	private static Generator code;
 	private static ArrayList<String> stack = new ArrayList<String>(); //stack of variables
 	private static ArrayList<Symbol> id = new ArrayList<Symbol>(); //table of symbol
-	private static int unnamedVariable = 0;
+	private static int unnamedVariable = 0,and=0;
 
 	public static void main(String[] args) throws FileNotFoundException,IOException,ParseError{
 		FileReader reader = new FileReader(args[0]);
@@ -64,24 +64,35 @@ public static void writeCond(Condition cond,boolean loop,boolean repeat){
 	Return : none
 	*/
 	ArrayList<String> temp = new ArrayList<String>();
+	int i=0;
+	int num=0;
+	if(repeat) // if it is a repeat then we need to inverse the stack
+		num = cond.getAnd();
 	while(cond.moreCond()){ // until no more conditions
 		temp = cond.getCond(); // get the condition
 		if(temp.get(0).equals("or"))
-			code.or(loop); // print an or block
+			code.or(loop,repeat); // print an or block
 		else if (temp.get(0).equals("and"))
 			code.and(); // generate the and condition
 		else if(!repeat)
 			code.cond(temp.get(1),temp.get(0),temp.get(2)); //original condition
 		else{ // repeated condition
 			if(stack.size()>0){ // we compare a variable
-				code.load("%"+unnamedVariable,stack.get(stack.size()-1)); //loading the variable to compare
+				if(num!=0){ // because it is a stack, we need to do a fifo
+					code.load("%"+unnamedVariable,stack.get(stack.size()-num+i)); //loading the variable to compare
+					stack.remove(stack.size()-num+i);
+				}
+				else{ // normal case
+					code.load("%"+unnamedVariable,stack.get(stack.size()-1)); //loading the variable to compare
+					stack.remove(stack.size()-1);
+				}
 				code.cond(temp.get(1),"%"+unnamedVariable,temp.get(2));
 				unnamedVariable+=1;
-				stack.remove(stack.size()-1);
 			}
 			else // we compare two int
 				code.cond(temp.get(1),temp.get(0),temp.get(2));
 		}
+		i++;
 	}
 	cond.resetPointer();
 }
@@ -470,6 +481,8 @@ public static void writeCond(Condition cond,boolean loop,boolean repeat){
 				if(ExprArith(false)){
 					cond.addCond(stack.get(stack.size()-1));//add the result of the expr
 					stack.remove(stack.size()-1);
+					if(loop)
+						and+=1;
 					return true;
 				}
 			}
@@ -568,6 +581,8 @@ public static void writeCond(Condition cond,boolean loop,boolean repeat){
 			Condition cond = Cond(true);//a loop
 			if(cond.getMatched())
 			if(Match(LexicalUnit.DO)){
+				cond.setAnd(and); // keep in memory
+				and=0; //reset
 				writeCond(cond,true,false);//a loop, not a repeated cond
 				code.beginDo();
 				if(Code())

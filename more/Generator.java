@@ -161,16 +161,19 @@ public class Generator{
       writer.println("		br i1 "+stack.get(stack.size()-1)+", label %"+"if_true"+ifCounter+", label %end"+ifCounter);
     stack.remove(stack.size()-1);
   }
-  public void or(boolean loop){
+  public void or(boolean loop,boolean repeat){
     /*
       Print the or blocks. The jump in case of false need to be to a or block
       in order to test more conditions
 
-    Arguments : boolean loop
+    Arguments : boolean loop, boolean repeat
     Return : none
     */
     if(loop)
-      writer.println("		br i1 "+stack.get(stack.size()-1)+", label %"+"loop"+loopCount+", label %or"+orCounter);
+      if(repeat)
+        writer.println("		br i1 "+stack.get(stack.size()-1)+", label %"+"loop"+(loopCount-endLoopCount-1)+", label %or"+orCounter);
+      else
+        writer.println("		br i1 "+stack.get(stack.size()-1)+", label %"+"loop"+(loopCount-endLoopCount)+", label %or"+orCounter);
     else
       writer.println("		br i1 "+stack.get(stack.size()-1)+", label %"+"if_true"+ifCounter+", label %or"+orCounter);
     writer.println("  or"+orCounter+":");

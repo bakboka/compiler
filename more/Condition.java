@@ -4,14 +4,41 @@ public class Condition{
   /*
   Personnal container for condition. It contain all the information about it.
   */
-  public boolean matched;
-  public ArrayList<String> simpleCond = new ArrayList<String>();
+  private boolean matched;
+  private ArrayList<String> simpleCond = new ArrayList<String>();
+  private ArrayList<Integer> and = new ArrayList<Integer>();
+
   public int pointer = 0; //cursor for the simpleCond
 
   public Condition(){
     /*
     Constructor. Nothing to see here move along
     */
+  }
+  public void setAnd(int i){
+    /*
+    set the value of the number of and in a condtion block
+
+    Arguments : Integer
+    Return : none
+    */
+    and.add(i);
+  }
+  public int getAnd(){
+    /*
+    get the last number of and in the condition block
+
+    Arguments : none
+    Return : integer
+    */
+    int temp;
+    if(and.size()>0){
+      temp = and.get(and.size()-1);
+      and.remove(and.size()-1);
+    }
+    else
+      temp=0;
+    return temp;
   }
   public void setMatched(boolean match){
     /*
