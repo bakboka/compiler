@@ -236,9 +236,9 @@ public static void writeCond(Condition cond,boolean loop,boolean repeat){
 			Send_output(22);
 			if(Match(LexicalUnit.VARNAME)){
 				if(loop){
-					stack.add((String)listSym.get(curToken-1).getValue());
+					stack.add("%"+(String)listSym.get(curToken-1).getValue());
 				}
-				code.load("%"+unnamedVariable,(String)listSym.get(curToken-1).getValue());
+				code.load("%"+unnamedVariable,"%"+(String)listSym.get(curToken-1).getValue());
 				stack.add("%"+unnamedVariable);
 				unnamedVariable+=1;
 				return true;
@@ -617,7 +617,7 @@ public static void writeCond(Condition cond,boolean loop,boolean repeat){
 		if(Match(LexicalUnit.VARNAME)){
 			code.load("%"+unnamedVariable,"%"+(String)listSym.get(curToken-1).getValue());
 			code.print("%"+unnamedVariable);
-			unnamedVariable+=1;
+			unnamedVariable+=2;
 			if(Match(LexicalUnit.RIGHT_PARENTHESIS))
 				return true;
 		}

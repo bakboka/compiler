@@ -12,7 +12,7 @@ public class Generator{
   public void printBegin(ArrayList<Symbol> id){
     writer.println("declare i32 @putchar(i32)");
 		writer.println("declare i32 @getchar()");
-    writer.println("define void @project(){");
+    writer.println("define void @main(){");
 		writer.println("	entry:");
     for(int i=0;i<id.size();i++){ // allocating memory for all variables
 			allocate((String)id.get(i).getValue());
@@ -88,7 +88,7 @@ public class Generator{
     stack.remove(stack.size()-1);
   }
   public void od(){
-    writer.println("		br i1 "+stack.get(stack.size()-1)+", label %loop"+(loopCount-1)+", label %endLoop"+(loopCount-endLoopCount-1));
+    writer.println("		br i1 "+stack.get(stack.size()-1)+", label %loop"+(loopCount-endLoopCount-1)+", label %endLoop"+(loopCount-endLoopCount-1));
     writer.println("	endLoop"+(loopCount-endLoopCount-1)+":");
 		endLoopCount+=1;
     stack.remove(stack.size()-1);
