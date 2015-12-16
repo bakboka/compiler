@@ -203,7 +203,7 @@ public static void writeCond(Condition cond,boolean loop,boolean repeat){
 			ArrayList<Boolean> test = AddSub();
 			if(test.get(0))
 			if(ExprArith(false)){
-				code.addition("%"+unnamedVariable,stack.get(stack.size()-1),stack.get(stack.size()-2),test.get(1));
+				code.addition("%"+unnamedVariable,stack.get(stack.size()-2),stack.get(stack.size()-1),test.get(1));
 				stack.remove(stack.size()-1); // poping the variable. It is useless now
 				stack.remove(stack.size()-1); // poping the variable. It is useless now
 				stack.add("%"+unnamedVariable);
@@ -307,7 +307,7 @@ public static void writeCond(Condition cond,boolean loop,boolean repeat){
 			ArrayList<Boolean> test = MultiDiv();
 			if(test.get(0))
 			if(Factor(loop)){
-				code.multiply("%"+unnamedVariable,stack.get(stack.size()-1),stack.get(stack.size()-2),test.get(1));
+				code.multiply("%"+unnamedVariable,stack.get(stack.size()-2),stack.get(stack.size()-1),test.get(1));
 				stack.remove(stack.size()-1); // poping the variable. It is useless now
 				stack.remove(stack.size()-1); // poping the variable. It is useless now
 				stack.add("%"+unnamedVariable);
