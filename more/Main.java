@@ -594,21 +594,48 @@ public static void writeCond(Condition cond,boolean loop,boolean repeat){
 				if(ExprArith(false))
 				if(Match(LexicalUnit.TO))
 				if(ExprArith(false)){
-					code.allocate(""+unnamedVariable);//"" to froce the conversion to string
-					code.assign("%"+unnamedVariable,stack.get(stack.size()-2));
+					code.allocate(""+unnamedVariable);//"" to force the conversion to string
+					code.assign("%"+unnamedVariable,stack.get(stack.size()-1)); // we store the "to" value
 					stack.remove(stack.size()-1);
 					unnamedVariable+=1;
-					code.load("%"+unnamedVariable,"%"+(unnamedVariable-1));
-					stack.add("%"+unnamedVariable);//last two elements are unnamed and our var
+					code.allocate(""+unnamedVariable);//"" to force the conversion to string
+					code.assign("%"+unnamedVariable,stack.get(stack.size()-1)); // we store the "by" value
+					stack.remove(stack.size()-1);
+					stack.add("%"+(unnamedVariable-1)); //	remember
+					stack.add("%"+unnamedVariable);
 					unnamedVariable+=1;
-					cond.addCond(stack.get(stack.size()-2));
+					//ok stack = varname,to,by
+					code.load("%"+unnamedVariable,"%"+(unnamedVariable-2));
+					stack.add("%"+unnamedVariable);//last two elements are unnamed and our var
+					//stack = varname,to,by,unnamed
+					unnamedVariable+=1;
+					code.load("%"+unnamedVariable,stack.get(stack.size()-4));
+					stack.add("%"+unnamedVariable);//last two elements are unnamed and our var
+					//stack = varname,to,by,unnamed,unnamed
+					unnamedVariable+=1;
+					cond.addCond(stack.get(stack.size()-1));
+					stack.remove(stack.size()-1);
+					//stack = varname,to,by,unnamed
 					cond.addCond("sle");// do if lesser or equal
 					cond.addCond(stack.get(stack.size()-1));
+					stack.remove(stack.size()-1);
+					//stack = varname,to,by
 					writeCond(cond,true,false); // a loop, not a repeated cond
 					code.beginDo();
 					if(Match(LexicalUnit.DO))
 					if(Code()){
-						writeCond(cond,true,true);
+						code.load("%"+unnamedVariable,stack.get(stack.size()-1));
+						unnamedVariable+=1;
+						stack.remove(stack.size()-1);
+						//stack = var, to
+						code.load("%"+unnamedVariable,stack.get(stack.size()-2));
+						unnamedVariable+=1;
+						stack.remove(stack.size()-1);
+						//stack = var
+						code.addition("%"+unnamedVariable,"%"+(unnamedVariable-1),"%"+(unnamedVariable-2),false);
+						code.assign(stack.get(stack.size()-1),"%"+unnamedVariable);
+						unnamedVariable+=1;
+						writeCond(cond,true,true); //a loop, a repeated cond
 						code.od();
 						if(Match(LexicalUnit.OD))
 							return true;
