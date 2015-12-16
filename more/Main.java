@@ -594,25 +594,7 @@ public static void writeCond(Condition cond,boolean loop,boolean repeat){
 				if(ExprArith(false))
 				if(Match(LexicalUnit.TO))
 				if(ExprArith(false)){
-					code.allocate(""+unnamedVariable);//"" to force the conversion to string
-					code.assign("%"+unnamedVariable,stack.get(stack.size()-1)); // we store the "to" value
-					stack.remove(stack.size()-1);
-					unnamedVariable+=1;
-					code.allocate(""+unnamedVariable);//"" to force the conversion to string
-					code.assign("%"+unnamedVariable,stack.get(stack.size()-1)); // we store the "by" value
-					stack.remove(stack.size()-1);
-					stack.add("%"+(unnamedVariable-1)); //	remember
-					stack.add("%"+unnamedVariable);
-					unnamedVariable+=1;
-					//ok stack = varname,to,by
-					code.load("%"+unnamedVariable,"%"+(unnamedVariable-2));
-					stack.add("%"+unnamedVariable);//last two elements are unnamed and our var
-					//stack = varname,to,by,unnamed
-					unnamedVariable+=1;
-					code.load("%"+unnamedVariable,stack.get(stack.size()-4));
-					stack.add("%"+unnamedVariable);//last two elements are unnamed and our var
-					//stack = varname,to,by,unnamed,unnamed
-					unnamedVariable+=1;
+					beginFor();
 					cond.addCond(stack.get(stack.size()-1));
 					stack.remove(stack.size()-1);
 					//stack = varname,to,by,unnamed
@@ -624,17 +606,7 @@ public static void writeCond(Condition cond,boolean loop,boolean repeat){
 					code.beginDo();
 					if(Match(LexicalUnit.DO))
 					if(Code()){
-						code.load("%"+unnamedVariable,stack.get(stack.size()-1));
-						unnamedVariable+=1;
-						stack.remove(stack.size()-1);
-						//stack = var, to
-						code.load("%"+unnamedVariable,stack.get(stack.size()-2));
-						unnamedVariable+=1;
-						stack.remove(stack.size()-1);
-						//stack = var
-						code.addition("%"+unnamedVariable,"%"+(unnamedVariable-1),"%"+(unnamedVariable-2),false);
-						code.assign(stack.get(stack.size()-1),"%"+unnamedVariable);
-						unnamedVariable+=1;
+						endFor();
 						writeCond(cond,true,true); //a loop, a repeated cond
 						code.od();
 						if(Match(LexicalUnit.OD))
@@ -644,6 +616,53 @@ public static void writeCond(Condition cond,boolean loop,boolean repeat){
 			}
 		}
 		return false;
+	}
+	public static void beginFor(){
+		/*
+		allocate and store the variables needed to execute the for loop
+
+		Arguments : none
+		Return : none
+		*/
+		//stack = var
+		code.allocate(""+unnamedVariable);//"" to force the conversion to string
+		code.assign("%"+unnamedVariable,stack.get(stack.size()-1)); // we store the "to" value
+		stack.remove(stack.size()-1);
+		unnamedVariable+=1;
+		code.allocate(""+unnamedVariable);//"" to force the conversion to string
+		code.assign("%"+unnamedVariable,stack.get(stack.size()-1)); // we store the "by" value
+		stack.remove(stack.size()-1);
+		stack.add("%"+(unnamedVariable-1));//to
+		stack.add("%"+unnamedVariable);//by
+		unnamedVariable+=1;
+		//stack = varname,to,by
+		code.load("%"+unnamedVariable,"%"+(unnamedVariable-2)); //load to
+		stack.add("%"+unnamedVariable);//last two elements are unnamed and our var
+		//stack = varname,to,by,unnamed
+		unnamedVariable+=1;
+		code.load("%"+unnamedVariable,stack.get(stack.size()-4)); //load var
+		stack.add("%"+unnamedVariable);//last two elements are unnamed and our var
+		//stack = varname,to,by,unnamed,unnamed
+		unnamedVariable+=1;
+	}
+	public static void endFor(){
+		/*
+		Load and do the arithmetics necessary to execute the next for loop
+
+		Arguments : none
+		Return : none
+		*/
+		code.load("%"+unnamedVariable,stack.get(stack.size()-1)); // load by
+		unnamedVariable+=1;
+		stack.remove(stack.size()-1);
+		//stack = var, to
+		code.load("%"+unnamedVariable,stack.get(stack.size()-2)); // load the new value of var
+		unnamedVariable+=1;
+		stack.remove(stack.size()-1);
+		//stack = var
+		code.addition("%"+unnamedVariable,"%"+(unnamedVariable-1),"%"+(unnamedVariable-2),false);// add the by to var
+		code.assign(stack.get(stack.size()-1),"%"+unnamedVariable);//store the new value of var
+		unnamedVariable+=1;
 	}
 	public static boolean Print(){
 		Send_output(50);
