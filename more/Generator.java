@@ -90,8 +90,10 @@ public class Generator{
   public void od(){
     writer.println("		br i1 "+stack.get(stack.size()-1)+", label %loop"+(loopCount-endLoopCount-1)+", label %endLoop"+(loopCount-endLoopCount-1));
     writer.println("	endLoop"+(loopCount-endLoopCount-1)+":");
-		endLoopCount+=1;
     stack.remove(stack.size()-1);
+		endLoopCount+=1;
+    if(endLoopCount == loopCount)
+      endLoopCount = 0;
   }
   public void read(String var){
     writer.println("		"+var+" = call i32 @getchar()");

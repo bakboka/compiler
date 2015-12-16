@@ -67,10 +67,14 @@ public static void writeCond(Condition cond,boolean loop,boolean repeat){
 		else if(!repeat)
 			code.cond(temp.get(1),temp.get(0),temp.get(2));
 		else{
-			code.load("%"+unnamedVariable,stack.get(stack.size()-1));
-			code.cond(temp.get(1),"%"+unnamedVariable,temp.get(2));
-			unnamedVariable+=1;
-			stack.remove(stack.size()-1);
+			if(stack.size()>0){ // we compare a variable
+				code.load("%"+unnamedVariable,stack.get(stack.size()-1));
+				code.cond(temp.get(1),"%"+unnamedVariable,temp.get(2));
+				unnamedVariable+=1;
+				stack.remove(stack.size()-1);
+			}
+			else // we compare two int
+				code.cond(temp.get(1),temp.get(0),temp.get(2));
 		}
 	}
 	cond.resetPointer();
