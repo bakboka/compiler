@@ -3,6 +3,7 @@ import java.util.ArrayList;
 
 public class Generator{
   private int ifCounter=0,condCounter=0,endCounter=0,loopCount=0,endLoopCount=0;
+  private int orCounter=0;
   private PrintWriter writer; // the llvm code stored
   private static ArrayList<String> stack = new ArrayList<String>(); //stack for conditions
 
@@ -99,6 +100,15 @@ public class Generator{
       writer.println("		br i1 "+stack.get(stack.size()-1)+", label %"+"loop"+loopCount+", label %endLoop"+loopCount);
     else
       writer.println("		br i1 "+stack.get(stack.size()-1)+", label %"+"if_true"+ifCounter+", label %end"+ifCounter);
+    stack.remove(stack.size()-1);
+  }
+  public void or(boolean loop){
+    if(loop)
+      writer.println("		br i1 "+stack.get(stack.size()-1)+", label %"+"loop"+loopCount+", label %or"+orCounter);
+    else
+      writer.println("		br i1 "+stack.get(stack.size()-1)+", label %"+"if_true"+ifCounter+", label %or"+orCounter);
+    writer.println("  or"+orCounter+":");
+    orCounter+=1;
     stack.remove(stack.size()-1);
   }
   public void and(){

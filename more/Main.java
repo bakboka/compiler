@@ -61,7 +61,7 @@ public static void writeCond(Condition cond,boolean loop,boolean repeat){
 	while(cond.moreCond()){
 		temp = cond.getCond();
 		if(temp.get(0).equals("or"))
-			code.jump(loop);
+			code.or(loop);
 		else if (temp.get(0).equals("and"))
 			code.and();
 		else if(!repeat)
