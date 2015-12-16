@@ -8,7 +8,7 @@ public class Main {
 	private static ArrayList<Symbol> listSym = new ArrayList<Symbol>();
 	private static int curToken = 0;
 	private static Generator code;
-	private static ArrayList<String> stack = new ArrayList<String>(); //stack of things
+	private static ArrayList<String> stack = new ArrayList<String>(); //stack of variables
 	private static ArrayList<Symbol> id = new ArrayList<Symbol>(); //table of symbol
 	private static int unnamedVariable = 0;
 
@@ -19,7 +19,7 @@ public class Main {
 		for(Symbol symbol = scanner.nextToken();symbol.getType() != LexicalUnit.END_OF_STREAM;symbol = scanner.nextToken()){ // getting every token
 			listSym.add(symbol);
 			if(symbol.getType() == LexicalUnit.VARNAME && !checkID(symbol)){ // only add an identifier to the list if it is not already in it
-				id.add(symbol);
+				id.add(symbol); //adding the symbol to the table
 			}
 		}
 		listSym.add(new Symbol(LexicalUnit.END_OF_STREAM,0,0,null)); //lines and column not important
@@ -31,7 +31,7 @@ public class Main {
 	/*
 		checks if the identifier is already in our list
 		returns true if it is
-		return false if it is not
+		return false otherwise
 	*/
 		for(int i=0;i<id.size();i++){
 			if(id.get(i).getValue().toString().equals(symbol.getValue().toString())){
@@ -57,18 +57,24 @@ public class Main {
 		//System.out.print(no + " ");
 	}
 public static void writeCond(Condition cond,boolean loop,boolean repeat){
+	/*
+	write all the conditions contained by the object Condition
+
+	Arguments : Condition the container, boolean loop, boolean repeat
+	Return : none
+	*/
 	ArrayList<String> temp = new ArrayList<String>();
-	while(cond.moreCond()){
-		temp = cond.getCond();
+	while(cond.moreCond()){ // until no more conditions
+		temp = cond.getCond(); // get the condition
 		if(temp.get(0).equals("or"))
-			code.or(loop);
+			code.or(loop); // print an or block
 		else if (temp.get(0).equals("and"))
-			code.and();
+			code.and(); // generate the and condition
 		else if(!repeat)
-			code.cond(temp.get(1),temp.get(0),temp.get(2));
-		else{
+			code.cond(temp.get(1),temp.get(0),temp.get(2)); //original condition
+		else{ // repeated condition
 			if(stack.size()>0){ // we compare a variable
-				code.load("%"+unnamedVariable,stack.get(stack.size()-1));
+				code.load("%"+unnamedVariable,stack.get(stack.size()-1)); //loading the variable to compare
 				code.cond(temp.get(1),"%"+unnamedVariable,temp.get(2));
 				unnamedVariable+=1;
 				stack.remove(stack.size()-1);
@@ -179,7 +185,7 @@ public static void writeCond(Condition cond,boolean loop,boolean repeat){
 			stack.add("%"+(String)listSym.get(curToken-1).getValue());
 			if(Match(LexicalUnit.ASSIGN))
 			if(ExprArith(false)){
-				code.assign(stack.get(stack.size()-2),stack.get(stack.size()-1));
+				code.assign(stack.get(stack.size()-2),stack.get(stack.size()-1));//left the variable, right the result of the expr
 				stack.remove(stack.size()-1);
 				stack.remove(stack.size()-1);
 				return true;
@@ -353,7 +359,7 @@ public static void writeCond(Condition cond,boolean loop,boolean repeat){
 		case TIMES:
 			Send_output(28);
 			if(Match(LexicalUnit.TIMES)){
-				div.add(true);//we matched something good
+				div.add(true);//we matched
 				div.add(false);//not a division
 				return div;
 			}
@@ -361,7 +367,7 @@ public static void writeCond(Condition cond,boolean loop,boolean repeat){
 		case DIVIDE:
 			Send_output(29);
 			if(Match(LexicalUnit.DIVIDE)){
-				div.add(true);//we matched something good
+				div.add(true);//we matched
 				div.add(true);//a division
 				return div;
 			}
@@ -374,10 +380,10 @@ public static void writeCond(Condition cond,boolean loop,boolean repeat){
 		Send_output(30);
 		if(B1(listCond,loop))
 		if(B2(listCond,loop)){
-			listCond.setMatched(true);
+			listCond.setMatched(true); //we matched
 			return listCond;
 		}
-		listCond.setMatched(false);
+		listCond.setMatched(false); //nohing matched
 		return listCond;
 	}
 	public static boolean B1(Condition cond,boolean loop){
@@ -403,13 +409,11 @@ public static void writeCond(Condition cond,boolean loop,boolean repeat){
 		case OR:
 			Send_output(33);
 			if(Match(LexicalUnit.OR)){
-				//print every condition before
 				Condition subCond = Cond(loop);
 				if(subCond.getMatched()){
-					//print every condition after
-					cond.addCond(subCond);
+					cond.addCond(subCond); //adding the previous condition to the container
 					cond.addCond("or");
-					if(loop)
+					if(loop) //so we know were to jump next
 						cond.addCond("loop");
 					else
 						cond.addCond("if");
@@ -439,7 +443,7 @@ public static void writeCond(Condition cond,boolean loop,boolean repeat){
 				if(cond.getMatched()){
 					oldCond.addCond(cond);
 					oldCond.addCond("and");
-					oldCond.addCond(" ");
+					oldCond.addCond(" "); // nothing to add but easier to manage
 					return true;
 				}
 			}
@@ -458,13 +462,13 @@ public static void writeCond(Condition cond,boolean loop,boolean repeat){
 	public static boolean SimpleCond(Condition cond,boolean loop){
 		Send_output(37);
 		if(ExprArith(loop)){
-			cond.addCond(stack.get(stack.size()-1));
+			cond.addCond(stack.get(stack.size()-1)); //add the result of the expr
 			stack.remove(stack.size()-1);
 			if(Comp()){
-				cond.addCond(stack.get(stack.size()-1));
+				cond.addCond(stack.get(stack.size()-1));//add the comparator
 				stack.remove(stack.size()-1);
 				if(ExprArith(false)){
-					cond.addCond(stack.get(stack.size()-1));
+					cond.addCond(stack.get(stack.size()-1));//add the result of the expr
 					stack.remove(stack.size()-1);
 					return true;
 				}
@@ -475,10 +479,10 @@ public static void writeCond(Condition cond,boolean loop,boolean repeat){
 	public static boolean If(){
 		Send_output(38);
 		if(Match(LexicalUnit.IF)){
-			Condition cond = Cond(false);
+			Condition cond = Cond(false);//not a loop
 			if(cond.getMatched())
 			if(Match(LexicalUnit.THEN)){
-				writeCond(cond,false,false);
+				writeCond(cond,false,false);//not a loop,not a repeated cond
 				code.ifblock();
 				if(Code())
 				if(EndIf()){
@@ -561,14 +565,14 @@ public static void writeCond(Condition cond,boolean loop,boolean repeat){
 	public static boolean While(){
 		Send_output(47);
 		if(Match(LexicalUnit.WHILE)){
-			Condition cond = Cond(true);
+			Condition cond = Cond(true);//a loop
 			if(cond.getMatched())
 			if(Match(LexicalUnit.DO)){
-				writeCond(cond,true,false);
+				writeCond(cond,true,false);//a loop, not a repeated cond
 				code.beginDo();
 				if(Code())
 				if(Match(LexicalUnit.OD)){
-					writeCond(cond,true,true);
+					writeCond(cond,true,true);//a loop, repeated cond
 					code.od();
 					return true;
 				}
@@ -590,17 +594,17 @@ public static void writeCond(Condition cond,boolean loop,boolean repeat){
 				if(ExprArith(false))
 				if(Match(LexicalUnit.TO))
 				if(ExprArith(false)){
-					code.allocate(""+unnamedVariable);
+					code.allocate(""+unnamedVariable);//"" to froce the conversion to string
 					code.assign("%"+unnamedVariable,stack.get(stack.size()-2));
 					stack.remove(stack.size()-1);
 					unnamedVariable+=1;
 					code.load("%"+unnamedVariable,"%"+(unnamedVariable-1));
-					stack.add("%"+unnamedVariable);//last two are unnamed and our var
+					stack.add("%"+unnamedVariable);//last two elements are unnamed and our var
 					unnamedVariable+=1;
 					cond.addCond(stack.get(stack.size()-2));
 					cond.addCond("sle");// do if lesser or equal
 					cond.addCond(stack.get(stack.size()-1));
-					writeCond(cond,true,false);
+					writeCond(cond,true,false); // a loop, not a repeated cond
 					code.beginDo();
 					if(Match(LexicalUnit.DO))
 					if(Code()){
