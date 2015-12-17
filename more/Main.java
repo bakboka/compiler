@@ -10,7 +10,7 @@ public class Main {
 	private static Generator code; //code generator
 	private static ArrayList<String> stack = new ArrayList<String>(); //stack of variables
 	private static ArrayList<Symbol> id = new ArrayList<Symbol>(); //table of symbol
-	private static int unnamedVariable = 0,andCounter=0;
+	private static int unnamedVariable = 0,condCounter=0;
 
 	public static void main(String[] args) throws FileNotFoundException,IOException,ParseError{
 		FileReader reader = new FileReader(args[0]);
@@ -503,7 +503,7 @@ public class Main {
 					cond.addCond(stack.get(stack.size()-1));//add the result of the expr
 					stack.remove(stack.size()-1);
 					if(loop)
-						andCounter+=1; // one more condition
+						condCounter+=1; // one more condition
 					return true;
 				}
 			}
@@ -602,8 +602,8 @@ public class Main {
 			Condition cond = Cond(true);//a loop
 			if(cond.getMatched())
 			if(Match(LexicalUnit.DO)){
-				cond.setAnd(andCounter); // keep the number of cond in memory
-				andCounter=0; //reset
+				cond.setAnd(condCounter); // keep the number of cond in memory
+				condCounter=0; //reset
 				writeCond(cond,true,false);//a loop, not a repeated cond
 				code.beginDo();
 				if(Code())
