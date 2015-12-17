@@ -60,13 +60,14 @@ public class Parser{
 		else if(!repeat)
 			code.cond(temp.get(1),temp.get(0),temp.get(2)); //original condition
 		else{ // repeated condition
-			writeRepeatedCond(num,i,temp);
+			if(writeRepeatedCond(num,i,temp))
+        i++;
 		}
-		i++;
+
 	}
 	cond.resetPointer();
 }
-	private void writeRepeatedCond(int num,int i, ArrayList<String> temp){
+	private boolean writeRepeatedCond(int num,int i, ArrayList<String> temp){
 		/*
 		write the conditions that appears at the end of a loop
 
@@ -75,7 +76,7 @@ public class Parser{
 		*/
     int t;
     try{
-      t = Integer.parseInt(temp.get(0)); // it is a number
+      t = Integer.parseInt(temp.get(0));
     }
     catch(NumberFormatException nfe){
       t=0; //we set a default value because it is not a number
@@ -91,9 +92,11 @@ public class Parser{
 			}
 			code.cond(temp.get(1),"%"+unnamedVariable,temp.get(2));
 			unnamedVariable+=1;
+      return true;
 		}
 		else // we compare two int
 			code.cond(temp.get(1),temp.get(0),temp.get(2));
+    return false;
 	}
 	private boolean Goal(){
 		Send_output(1);
@@ -266,6 +269,8 @@ public class Parser{
 		case NUMBER:
 			Send_output(23);
 			if(Match(LexicalUnit.NUMBER)){
+        if(loop)
+          condCounter-=1;
 				stack.add((String)listSym.get(curToken-1).getValue()); // adding the value to the stack
 				return true;
 			}
