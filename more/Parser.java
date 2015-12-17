@@ -1,17 +1,17 @@
 import java.util.ArrayList;
 
 public class Parser{
-  private static ArrayList<Symbol> listSym;
-  private static int curToken = 0;
-  private static Generator code; //code generator
-  private static ArrayList<String> stack = new ArrayList<String>(); //stack of variables
-  private static int unnamedVariable = 0,condCounter=0;
+  private ArrayList<Symbol> listSym;
+  private int curToken = 0;
+  private Generator code; //code generator
+  private ArrayList<String> stack = new ArrayList<String>(); //stack of variables
+  private int unnamedVariable = 0,condCounter=0;
 
   public Parser(Generator gen,ArrayList<Symbol> list){
     code = gen;
     listSym = list;
   }
-  public static void Parse() throws ParseError{
+  public void Parse() throws ParseError{
 		/*
 		Parse the input code. Throw an error if an unexpected token is find
 
@@ -21,7 +21,7 @@ public class Parser{
 			if(!Goal())
 				throw new ParseError(listSym.get(curToken));
 	}
-	private static boolean Match(LexicalUnit t){
+	private boolean Match(LexicalUnit t){
 		/*
 		try to match the current token with what is expected. Return true if it
 		is matched
@@ -36,10 +36,10 @@ public class Parser{
 		else
 			return false;
 	}
-	private static void Send_output(int no){
+	private void Send_output(int no){
 		//System.out.print(no + " ");
 	}
-	private static void writeCond(Condition cond,boolean loop,boolean repeat){
+	private void writeCond(Condition cond,boolean loop,boolean repeat){
 	/*
 	write all the conditions contained by the object Condition
 
@@ -66,7 +66,7 @@ public class Parser{
 	}
 	cond.resetPointer();
 }
-	private static void writeRepeatedCond(int num,int i, ArrayList<String> temp){
+	private void writeRepeatedCond(int num,int i, ArrayList<String> temp){
 		/*
 		write the conditions that appears at the end of a loop
 
@@ -88,14 +88,14 @@ public class Parser{
 		else // we compare two int
 			code.cond(temp.get(1),temp.get(0),temp.get(2));
 	}
-	private static boolean Goal(){
+	private boolean Goal(){
 		Send_output(1);
 		if(Program())
 		if(Match(LexicalUnit.END_OF_STREAM))
 			return true;
 		return false;
 	}
-	private static boolean Program(){
+	private boolean Program(){
 		Send_output(2);
 		if(Match(LexicalUnit.BEG))
 		if(Code())
@@ -103,7 +103,7 @@ public class Parser{
 			return true;
 		return false;
 	}
-	private static boolean Code(){
+	private boolean Code(){
 		switch(listSym.get(curToken).getType()){
 		case OD:
 		case FI:
@@ -123,14 +123,14 @@ public class Parser{
 		}
 		return false;
 	}
-	private static boolean InstList(){
+	private boolean InstList(){
 		Send_output(5);
 		if(Instruction())
 		if(EndList())
 			return true;
 		return false;
 	}
-	private static boolean EndList(){
+	private boolean EndList(){
 		switch(listSym.get(curToken).getType()){
 		case SEMICOLON:
 			Send_output(6);
@@ -147,7 +147,7 @@ public class Parser{
 		}
 		return false;
 	}
-	private static boolean Instruction(){
+	private boolean Instruction(){
 		switch(listSym.get(curToken).getType()){
 			case VARNAME:
 				Send_output(8);
@@ -182,7 +182,7 @@ public class Parser{
 		}
 		return false;
 	}
-	private static boolean Assign(){
+	private boolean Assign(){
 		Send_output(14);
 		if(Match(LexicalUnit.VARNAME)){
 			stack.add("%"+(String)listSym.get(curToken-1).getValue());
@@ -197,14 +197,14 @@ public class Parser{
 		return false;
 
 	}
-	private static boolean ExprArith(boolean loop){
+	private boolean ExprArith(boolean loop){
 		Send_output(15);
 		if(Factor(loop))
 		if(Terms())
 			return true;
 		return false;
 	}
-	private static boolean Terms(){
+	private boolean Terms(){
 		switch(listSym.get(curToken).getType()){
 		case PLUS:
 		case MINUS:
@@ -243,7 +243,7 @@ public class Parser{
 		}
 		return false;
 	}
-	private static boolean A1(boolean loop){
+	private boolean A1(boolean loop){
 		switch(listSym.get(curToken).getType()){
 		case VARNAME:
 			Send_output(22);
@@ -278,7 +278,7 @@ public class Parser{
 		}
 		return false;
 	}
-	private static ArrayList<Boolean> AddSub(){
+	private ArrayList<Boolean> AddSub(){
 		ArrayList<Boolean> sub = new ArrayList<Boolean>();
 		switch(listSym.get(curToken).getType()){
 		case PLUS:
@@ -300,14 +300,14 @@ public class Parser{
 		sub.add(false);//nothing matched
 		return sub;
 	}
-	private static boolean Factor(boolean loop){
+	private boolean Factor(boolean loop){
 		Send_output(18);
 		if(A1(loop))
 		if(Factors(loop))
 			return true;
 		return false;
 	}
-	private static boolean Factors(boolean loop){
+	private  boolean Factors(boolean loop){
 		switch(listSym.get(curToken).getType()){
 		case TIMES:
 		case DIVIDE:
@@ -355,7 +355,7 @@ public class Parser{
 		}
 		return false;
 	}
-	private static ArrayList<Boolean> MultiDiv(){
+	private ArrayList<Boolean> MultiDiv(){
 		ArrayList<Boolean> div = new ArrayList<Boolean>();
 		switch(listSym.get(curToken).getType()){
 		case TIMES:
@@ -377,7 +377,7 @@ public class Parser{
 		div.add(false); // nothing was matched
 		return div;
 	}
-	private static Condition Cond(boolean loop){
+	private Condition Cond(boolean loop){
 		Condition listCond = new Condition();
 		Send_output(30);
 		if(B1(listCond,loop))
@@ -388,7 +388,7 @@ public class Parser{
 		listCond.setMatched(false); //nohing matched
 		return listCond;
 	}
-	private static boolean B1(Condition cond,boolean loop){
+	private boolean B1(Condition cond,boolean loop){
 		switch(listSym.get(curToken).getType()){
 		case VARNAME:
 		case NUMBER:
@@ -406,7 +406,7 @@ public class Parser{
 		}
 		return false;
 	}
-	private static boolean B2(Condition cond,boolean loop){
+	private boolean B2(Condition cond,boolean loop){
 		switch(listSym.get(curToken).getType()){
 		case OR:
 			Send_output(33);
@@ -436,7 +436,7 @@ public class Parser{
 		}
 		return false;
 	}
-	private static boolean And(Condition oldCond,boolean loop){
+	private boolean And(Condition oldCond,boolean loop){
 		switch(listSym.get(curToken).getType()){
 		case AND:
 			Send_output(35);
@@ -461,7 +461,7 @@ public class Parser{
 		}
 		return false;
 	}
-	private static boolean SimpleCond(Condition cond,boolean loop){
+	private boolean SimpleCond(Condition cond,boolean loop){
 		Send_output(37);
 		if(ExprArith(loop)){
 			cond.addCond(stack.get(stack.size()-1)); //add the result of the expr
@@ -480,7 +480,7 @@ public class Parser{
 		}
 		return false;
 	}
-	private static boolean If(){
+	private boolean If(){
 		Send_output(38);
 		if(Match(LexicalUnit.IF)){
 			Condition cond = Cond(false);//not a loop
@@ -497,7 +497,7 @@ public class Parser{
 		}
 		return false;
 	}
-	private static boolean EndIf(){
+	private boolean EndIf(){
 		switch(listSym.get(curToken).getType()){
 		case FI:
 			Send_output(39);
@@ -520,7 +520,7 @@ public class Parser{
 		}
 		return false;
 	}
-	private static boolean Comp(){
+	private boolean Comp(){
 		switch(listSym.get(curToken).getType()){
 		case EQUAL:
 			Send_output(41);
@@ -566,7 +566,7 @@ public class Parser{
 		}
 		return false;
 	}
-	private static boolean While(){
+	private boolean While(){
 		Send_output(47);
 		if(Match(LexicalUnit.WHILE)){
 			Condition cond = Cond(true);//a loop
@@ -586,7 +586,7 @@ public class Parser{
 		}
 		return false;
 	}
-	private static boolean For(){
+	private boolean For(){
 		Send_output(48);
 		Condition cond = new Condition();
 		if(Match(LexicalUnit.FOR))
@@ -623,7 +623,7 @@ public class Parser{
 		}
 		return false;
 	}
-	private static void beginFor(){
+	private void beginFor(){
 		/*
 		allocate and store the variables needed to execute the for loop
 
@@ -651,7 +651,7 @@ public class Parser{
 		//stack = varname,to,by,unnamed,unnamed
 		unnamedVariable+=1;
 	}
-	private static void endFor(){
+	private void endFor(){
 		/*
 		Load and do the arithmetics necessary to execute the next for loop
 
@@ -670,7 +670,7 @@ public class Parser{
 		code.assign(stack.get(stack.size()-1),"%"+unnamedVariable);//store the new value of var
 		unnamedVariable+=1;
 	}
-	private static boolean Print(){
+	private boolean Print(){
 		Send_output(50);
 		if(Match(LexicalUnit.PRINT))
 		if(Match(LexicalUnit.LEFT_PARENTHESIS))
@@ -683,7 +683,7 @@ public class Parser{
 		}
 		return false;
 	}
-	private static boolean Read(){
+	private boolean Read(){
 		Send_output(51);
 		if(Match(LexicalUnit.READ))
 		if(Match(LexicalUnit.LEFT_PARENTHESIS))
