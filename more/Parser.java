@@ -8,15 +8,15 @@ public class Parser{
   private int unnamedVariable = 0,condCounter=0;
 
   public Parser(Generator gen,ArrayList<Symbol> list){
+    /**
+    * Constructor of the class
+    */
     code = gen;
     listSym = list;
   }
   public void Parse() throws ParseError{
-		/*
-		Parse the input code. Throw an error if an unexpected token is find
-
-		Arguments : none
-		Return : none
+		/**
+		* Parse the input code. Throw an error if an unexpected token is find
 		*/
 			if(!Goal())
 				throw new ParseError(listSym.get(curToken));
@@ -73,7 +73,14 @@ public class Parser{
 		Arguments : int num, int i, ArrayList temp
 		Return : none
 		*/
-		if(stack.size()>0){ // we compare a variable
+    int t;
+    try{
+      t = Integer.parseInt(temp.get(0)); // it is a number
+    }
+    catch(NumberFormatException nfe){
+      t=0; //we set a default value because it is not a number
+    }
+		if(stack.size()>0 && t == 0 && !temp.get(0).equals("0")){ // we have a variable if t=0 and t was a result of the error
 			if(num!=0){ // we need to do a fifo of the variables. The stack have the reverse order
 				code.load("%"+unnamedVariable,stack.get(stack.size()-num+i)); //loading the variable to compare
 				stack.remove(stack.size()-num+i);
