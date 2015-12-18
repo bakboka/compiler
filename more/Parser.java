@@ -5,7 +5,7 @@ public class Parser{
   private int curToken = 0;
   private Generator code; //code generator
   private ArrayList<String> stack = new ArrayList<String>(); //stack of variables
-  private int unnamedVariable = 0,condCounter=0;
+  private int unnamedVariable = 0,condCounter=0,minusCounter=0;
 
   public Parser(Generator gen,ArrayList<Symbol> list){
     /**
@@ -261,6 +261,11 @@ public class Parser{
 				if(loop)
 					stack.add("%"+(String)listSym.get(curToken-1).getValue()); //we need to remember to regenerate condition for loops
 				code.load("%"+unnamedVariable,"%"+(String)listSym.get(curToken-1).getValue());
+        if(minusCounter%2!=0){
+          unnamedVariable+=1;
+          code.multiply("%"+unnamedVariable,"-1","%"+(unnamedVariable-1),false);
+        }
+        minusCounter=0;
 				stack.add("%"+unnamedVariable);
 				unnamedVariable+=1;
 				return true;
@@ -270,23 +275,40 @@ public class Parser{
 			Send_output(23);
 			if(Match(LexicalUnit.NUMBER)){
         if(loop)
-          condCounter-=1;
-				stack.add((String)listSym.get(curToken-1).getValue()); // adding the value to the stack
+          condCounter-=1;//pure integer comparison. Decrement to avoid going out of bond during fifo pĥase
+        if(minusCounter%2==0)
+				  stack.add((String)listSym.get(curToken-1).getValue()); // adding the value to the stack
+        else
+          stack.add("-"+(String)listSym.get(curToken-1).getValue()); // adding the value to the stack
+        minusCounter=0;
 				return true;
 			}
 			break;
 		case LEFT_PARENTHESIS:
 			Send_output(24);
+      boolean negative = false;
+      if(minusCounter%2!=0)
+        negative=true;
+      minusCounter=0;
 			if(Match(LexicalUnit.LEFT_PARENTHESIS))
 			if(ExprArith(false))
-			if(Match(LexicalUnit.RIGHT_PARENTHESIS))
+			if(Match(LexicalUnit.RIGHT_PARENTHESIS)){
+        if(negative){
+          code.multiply("%"+unnamedVariable,"-1",stack.get(stack.size()-1),false);
+          stack.remove(stack.size()-1);
+          stack.add("%"+unnamedVariable);
+          unnamedVariable+=1;
+        }
 				return true;
+      }
 			break;
 		case MINUS:
 			Send_output(25);
-			if(Match(LexicalUnit.MINUS))
-			if(A1(loop))
-				return true;
+			if(Match(LexicalUnit.MINUS)){
+        minusCounter+=1;
+  			if(A1(loop))
+  				return true;
+      }
 		}
 		return false;
 	}
